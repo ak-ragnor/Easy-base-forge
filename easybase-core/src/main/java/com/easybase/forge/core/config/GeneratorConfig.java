@@ -79,19 +79,26 @@ public class GeneratorConfig {
     }
 
     /**
-     * Resolve a package pattern by substituting {@code {basePackage}}, {@code {resource}},
-     * and {@code {Resource}} placeholders.
+     * Returns the {@link LayoutStrategy} for this configuration.
+     *
+     * <p>Defaults to {@link MultiModuleLayoutStrategy} when no {@code output.layout} is set.
      */
-    public String resolvePackage(String pattern, String resourceName) {
-        String pascalCase = toPascalCase(resourceName);
-        return pattern
-                .replace("{basePackage}", basePackage)
-                .replace("{Resource}", pascalCase)
-                .replace("{resource}", resourceName.toLowerCase());
+    public LayoutStrategy getLayoutStrategy() {
+        LayoutMode mode = (output != null && output.getLayout() != null)
+                ? output.getLayout()
+                : LayoutMode.MULTI_MODULE;
+        return mode == LayoutMode.FLAT
+                ? new FlatLayoutStrategy(basePackage)
+                : new MultiModuleLayoutStrategy(basePackage);
     }
 
-    private static String toPascalCase(String name) {
-        if (name == null || name.isEmpty()) return name;
-        return Character.toUpperCase(name.charAt(0)) + name.substring(1).toLowerCase();
+    /**
+     * Resolve a package pattern by substituting {@code {basePackage}}, {@code {resource}},
+     * and {@code {Resource}} placeholders.
+     *
+     * <p>Delegates to {@link #getLayoutStrategy()}.
+     */
+    public String resolvePackage(String pattern, String resourceName) {
+        return getLayoutStrategy().resolvePackage(pattern, resourceName);
     }
 }
