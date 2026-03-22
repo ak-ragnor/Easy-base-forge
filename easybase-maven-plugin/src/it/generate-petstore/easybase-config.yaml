@@ -1,0 +1,16 @@
+basePackage: com.example.petstore
+
+structure:
+  controller:
+    package: "{basePackage}.{resource}.controller"
+    basePackage: "{basePackage}.{resource}.controller.base"
+  delegate:
+    package: "{basePackage}.{resource}.delegate"
+  dto:
+    package: "{basePackage}.{resource}.dto"
+
+generate:
+  delegateImpl: false
+  responseEntityWrapping: ALWAYS
+  beanValidation: true
+  pagination: NONE
