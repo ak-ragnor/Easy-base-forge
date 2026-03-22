@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & Test (Java ${{ matrix.java }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        java: [17, 21]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: temurin
+          cache: maven
+
+      - name: Build, test, and run invoker integration tests
+        run: mvn verify --batch-mode --no-transfer-progress -Dsurefire.failIfNoSpecifiedTests=false
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports-java-${{ matrix.java }}
+          path: '**/target/surefire-reports/'
+
+  native:
+    name: Native image smoke test
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: graalvm-community
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: true
+          cache: maven
+
+      - name: Build fat JAR
+        run: mvn package -pl easybase-cli -am --batch-mode --no-transfer-progress -DskipTests
+
+      - name: Build native image
+        run: |
+          mvn package -pl easybase-cli --batch-mode --no-transfer-progress \
+            -DskipTests -Pnative
+
+      - name: Smoke test — easybase --help
+        run: ./easybase-cli/target/easybase --help
