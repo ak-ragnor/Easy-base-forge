@@ -1,0 +1,10 @@
+{
+  "resources": {
+    "includes": [
+      { "pattern": ".*\\.yaml$" },
+      { "pattern": ".*\\.json$" },
+      { "pattern": "META-INF/swagger/.*" },
+      { "pattern": "META-INF/services/.*" }
+    ]
+  }
+}
