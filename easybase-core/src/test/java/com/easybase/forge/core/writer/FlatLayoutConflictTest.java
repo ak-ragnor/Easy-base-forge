@@ -79,7 +79,7 @@ class FlatLayoutConflictTest {
         config.withOutputDirectory(outputDir);
 
         // Build two resources that each have a DTO named "SharedDTO"
-        DtoSchema sharedDto = new DtoSchema("SharedDTO", "com.example.api.dto", List.of());
+        DtoSchema sharedDto = DtoSchema.of("SharedDTO", "com.example.api.dto", List.of());
         ApiResource resource1 = new ApiResource("Pets", "pets", List.of(), List.of(sharedDto));
         ApiResource resource2 = new ApiResource("Orders", "orders", List.of(), List.of(sharedDto));
 
