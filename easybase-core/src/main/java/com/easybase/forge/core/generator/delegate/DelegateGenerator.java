@@ -1,6 +1,7 @@
 package com.easybase.forge.core.generator.delegate;
 
 import com.easybase.forge.core.config.GeneratorConfig;
+import com.easybase.forge.core.config.PaginationMode;
 import com.easybase.forge.core.config.ResponseEntityMode;
 import com.easybase.forge.core.generator.GeneratedArtifact;
 import com.easybase.forge.core.generator.GeneratorUtils;
@@ -35,7 +36,9 @@ public class DelegateGenerator {
                 .addModifiers(Modifier.PUBLIC);
 
         for (ApiEndpoint endpoint : resource.endpoints()) {
-            MethodSpec method = buildMethod(endpoint, typeResolver, config.getGenerate().getResponseEntityWrapping());
+            MethodSpec method = buildMethod(endpoint, typeResolver,
+                    config.getGenerate().getResponseEntityWrapping(),
+                    config.getGenerate().getPagination());
             interfaceBuilder.addMethod(method);
         }
 
@@ -51,8 +54,9 @@ public class DelegateGenerator {
     }
 
     private MethodSpec buildMethod(ApiEndpoint endpoint, TypeNameResolver typeResolver,
-                                   ResponseEntityMode mode) {
-        TypeName returnType = resolveReturnType(endpoint, typeResolver, mode);
+                                   ResponseEntityMode mode, PaginationMode paginationMode) {
+        boolean applyPagination = endpoint.paginated() && paginationMode == PaginationMode.SPRING_DATA;
+        TypeName returnType = resolveReturnType(endpoint, typeResolver, mode, applyPagination);
 
         MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(endpoint.operationId())
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
@@ -73,23 +77,34 @@ public class DelegateGenerator {
             methodBuilder.addParameter(typeResolver.resolve(bodyType), deriveBodyParamName(bodyType));
         }
 
+        // Spring Data pageable parameter
+        if (applyPagination) {
+            methodBuilder.addParameter(TypeNameResolver.pageableType(), "pageable");
+        }
+
         return methodBuilder.build();
     }
 
     private TypeName resolveReturnType(ApiEndpoint endpoint, TypeNameResolver typeResolver,
-                                       ResponseEntityMode mode) {
+                                       ResponseEntityMode mode, boolean paginated) {
         ApiResponse primary = endpoint.primaryResponse();
         String bodyType = (primary != null && primary.schema() != null)
                 ? primary.schema().javaType() : null;
 
         boolean isVoid = bodyType == null || bodyType.equals("Void");
 
+        if (paginated && !isVoid) {
+            return switch (mode) {
+                case ALWAYS    -> typeResolver.responseEntityPage(bodyType);
+                case NEVER     -> typeResolver.page(bodyType);
+                case VOID_ONLY -> typeResolver.page(bodyType);
+            };
+        }
+
         return switch (mode) {
-            case ALWAYS -> typeResolver.responseEntity(bodyType);
-            case NEVER  -> isVoid ? TypeName.VOID : typeResolver.resolve(bodyType);
-            case VOID_ONLY -> isVoid
-                    ? typeResolver.responseEntity(null)
-                    : typeResolver.resolve(bodyType);
+            case ALWAYS    -> typeResolver.responseEntity(bodyType);
+            case NEVER     -> isVoid ? TypeName.VOID : typeResolver.resolve(bodyType);
+            case VOID_ONLY -> isVoid ? typeResolver.responseEntity(null) : typeResolver.resolve(bodyType);
         };
     }
 

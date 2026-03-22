@@ -1,6 +1,7 @@
 package com.easybase.forge.core.generator.controller;
 
 import com.easybase.forge.core.config.GeneratorConfig;
+import com.easybase.forge.core.config.PaginationMode;
 import com.easybase.forge.core.config.ResponseEntityMode;
 import com.easybase.forge.core.generator.GeneratedArtifact;
 import com.easybase.forge.core.generator.GeneratorUtils;
@@ -75,7 +76,9 @@ public class BaseControllerGenerator {
     private MethodSpec buildEndpointMethod(ApiEndpoint endpoint, TypeNameResolver typeResolver,
                                             ClassName delegateType, GeneratorConfig config) {
         ResponseEntityMode mode = config.getGenerate().getResponseEntityWrapping();
-        TypeName returnType = resolveReturnType(endpoint, typeResolver, mode);
+        PaginationMode paginationMode = config.getGenerate().getPagination();
+        boolean applyPagination = endpoint.paginated() && paginationMode == PaginationMode.SPRING_DATA;
+        TypeName returnType = resolveReturnType(endpoint, typeResolver, mode, applyPagination);
 
         MethodSpec.Builder mb = MethodSpec.methodBuilder(endpoint.operationId())
                 .addModifiers(Modifier.PUBLIC)
@@ -117,6 +120,12 @@ public class BaseControllerGenerator {
             delegateArgs.add(bodyName);
         }
 
+        // Spring Data Pageable parameter (appended last)
+        if (applyPagination) {
+            mb.addParameter(TypeNameResolver.pageableType(), "pageable");
+            delegateArgs.add("pageable");
+        }
+
         String argList = String.join(", ", delegateArgs);
         String delegateCall = "delegate." + endpoint.operationId() + "(" + argList + ")";
 
@@ -145,11 +154,19 @@ public class BaseControllerGenerator {
     }
 
     private TypeName resolveReturnType(ApiEndpoint endpoint, TypeNameResolver typeResolver,
-                                       ResponseEntityMode mode) {
+                                       ResponseEntityMode mode, boolean paginated) {
         ApiResponse primary = endpoint.primaryResponse();
         String bodyType = (primary != null && primary.schema() != null)
                 ? primary.schema().javaType() : null;
         boolean isVoid = bodyType == null || bodyType.equals("Void");
+
+        if (paginated && !isVoid) {
+            return switch (mode) {
+                case ALWAYS    -> typeResolver.responseEntityPage(bodyType);
+                case NEVER     -> typeResolver.page(bodyType);
+                case VOID_ONLY -> typeResolver.page(bodyType);
+            };
+        }
 
         return switch (mode) {
             case ALWAYS     -> typeResolver.responseEntity(bodyType);

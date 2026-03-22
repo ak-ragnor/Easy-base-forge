@@ -61,4 +61,37 @@ public class TypeNameResolver {
                 ClassName.get("org.springframework.http", "ResponseEntity"),
                 body);
     }
+
+    /**
+     * Converts a Java type string to {@code Page<T>} for paginated endpoints.
+     *
+     * <p>If the type is already a {@code List<X>}, the element type {@code X} is used directly.
+     * Otherwise the full type is used as-is (e.g. {@code Page<PetDTO>}).
+     */
+    public TypeName page(String javaType) {
+        String elementType = javaType;
+        if (javaType != null && javaType.startsWith("List<") && javaType.endsWith(">")) {
+            elementType = javaType.substring(5, javaType.length() - 1);
+        }
+        TypeName element = (elementType == null || elementType.isBlank() || elementType.equals("Void"))
+                ? ClassName.get(Object.class)
+                : resolve(elementType);
+        return ParameterizedTypeName.get(
+                ClassName.get("org.springframework.data.domain", "Page"),
+                element);
+    }
+
+    /**
+     * Wraps a type in {@code ResponseEntity<Page<T>>} for paginated endpoints.
+     */
+    public TypeName responseEntityPage(String javaType) {
+        return ParameterizedTypeName.get(
+                ClassName.get("org.springframework.http", "ResponseEntity"),
+                page(javaType));
+    }
+
+    /** The {@code Pageable} type from Spring Data. */
+    public static TypeName pageableType() {
+        return ClassName.get("org.springframework.data.domain", "Pageable");
+    }
 }
