@@ -5,10 +5,7 @@ import com.easybase.forge.core.generator.AnnotationBuilder;
 import com.easybase.forge.core.generator.GeneratedArtifact;
 import com.easybase.forge.core.generator.GeneratorUtils;
 import com.easybase.forge.core.generator.TypeNameResolver;
-import com.easybase.forge.core.model.ArtifactType;
-import com.easybase.forge.core.model.ApiResource;
-import com.easybase.forge.core.model.DtoField;
-import com.easybase.forge.core.model.DtoSchema;
+import com.easybase.forge.core.model.*;
 import com.squareup.javapoet.*;
 
 import javax.lang.model.element.Modifier;
@@ -17,9 +14,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Generates one {@code @Data} Lombok DTO class per {@link DtoSchema} in a resource.
+ * Generates one DTO class per {@link DtoSchema} in a resource.
+ *
+ * <ul>
+ *   <li>Plain DTOs: {@code @Data} Lombok class with Jackson {@code @JsonProperty} + bean validation.</li>
+ *   <li>Union bases ({@link DtoSchema#union()} non-null): abstract class with
+ *       {@code @JsonTypeInfo} / {@code @JsonSubTypes} — no fields, no Lombok.</li>
+ *   <li>Union variants ({@link DtoSchema#parentClass()} non-null): {@code @Data} class that
+ *       extends the abstract base.</li>
+ * </ul>
  */
 public class DtoGenerator {
+
+    private static final ClassName JSON_TYPE_INFO =
+            ClassName.get("com.fasterxml.jackson.annotation", "JsonTypeInfo");
+    private static final ClassName JSON_SUB_TYPES =
+            ClassName.get("com.fasterxml.jackson.annotation", "JsonSubTypes");
+    private static final ClassName JSON_SUB_TYPE =
+            ClassName.get("com.fasterxml.jackson.annotation", "JsonSubTypes", "Type");
+    private static final ClassName NULLABLE =
+            ClassName.get("org.springframework.lang", "Nullable");
 
     public List<GeneratedArtifact> generate(ApiResource resource, GeneratorConfig config) {
         String dtoPkg = config.resolvePackage(
@@ -29,19 +43,29 @@ public class DtoGenerator {
 
         List<GeneratedArtifact> artifacts = new ArrayList<>();
         for (DtoSchema schema : resource.dtoSchemas()) {
-            GeneratedArtifact artifact = generateDto(schema, dtoPkg, typeResolver, config);
+            String content = schema.union() != null
+                    ? generateUnionBase(schema, dtoPkg)
+                    : generateDto(schema, dtoPkg, typeResolver, config);
+
             Path outputPath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), dtoPkg)
                     .resolve(schema.className() + ".java");
-            artifacts.add(new GeneratedArtifact(outputPath, ArtifactType.DTO, artifact.content()));
+            artifacts.add(new GeneratedArtifact(outputPath, ArtifactType.DTO, content));
         }
         return artifacts;
     }
 
-    private GeneratedArtifact generateDto(DtoSchema schema, String dtoPkg,
-                                           TypeNameResolver typeResolver, GeneratorConfig config) {
+    // ── Plain DTO / union variant ─────────────────────────────────────────────
+
+    private String generateDto(DtoSchema schema, String dtoPkg,
+                                TypeNameResolver typeResolver, GeneratorConfig config) {
         TypeSpec.Builder classBuilder = TypeSpec.classBuilder(schema.className())
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(ClassName.get("lombok", "Data"));
+
+        // Union variant: extend the abstract base
+        if (schema.parentClass() != null) {
+            classBuilder.superclass(ClassName.get(dtoPkg, schema.parentClass()));
+        }
 
         for (DtoField field : schema.fields()) {
             FieldSpec.Builder fb = FieldSpec.builder(
@@ -49,7 +73,12 @@ public class DtoGenerator {
                     field.name(),
                     Modifier.PRIVATE);
 
-            // Validation annotations first (before @JsonProperty, consistent ordering)
+            // @Nullable for optional fields with nullable: true
+            if (field.nullable()) {
+                fb.addAnnotation(NULLABLE);
+            }
+
+            // Validation annotations (before @JsonProperty for consistent ordering)
             if (config.getGenerate().isBeanValidation()) {
                 for (var constraint : field.validations()) {
                     fb.addAnnotation(AnnotationBuilder.build(constraint));
@@ -70,8 +99,41 @@ public class DtoGenerator {
                 .indent("    ")
                 .build();
 
-        // Return a placeholder artifact — caller sets the actual outputPath
-        return new GeneratedArtifact(Path.of(""), ArtifactType.DTO, javaFile.toString());
+        return javaFile.toString();
     }
 
+    // ── Abstract union base ───────────────────────────────────────────────────
+
+    private String generateUnionBase(DtoSchema schema, String dtoPkg) {
+        UnionDiscriminator union = schema.union();
+
+        // @JsonTypeInfo(use = NAME, include = PROPERTY, property = "discriminatorProp")
+        AnnotationSpec jsonTypeInfo = AnnotationSpec.builder(JSON_TYPE_INFO)
+                .addMember("use", "$T.Id.NAME", JSON_TYPE_INFO)
+                .addMember("include", "$T.As.PROPERTY", JSON_TYPE_INFO)
+                .addMember("property", "$S", union.propertyName())
+                .build();
+
+        // @JsonSubTypes({ @Type(value = Foo.class, name = "foo"), ... })
+        AnnotationSpec.Builder jsonSubTypes = AnnotationSpec.builder(JSON_SUB_TYPES);
+        for (UnionDiscriminator.SubtypeMapping m : union.subtypes()) {
+            AnnotationSpec typeAnnotation = AnnotationSpec.builder(JSON_SUB_TYPE)
+                    .addMember("value", "$T.class", ClassName.get(dtoPkg, m.className()))
+                    .addMember("name", "$S", m.discriminatorValue())
+                    .build();
+            jsonSubTypes.addMember("value", "$L", typeAnnotation);
+        }
+
+        TypeSpec typeSpec = TypeSpec.classBuilder(schema.className())
+                .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+                .addAnnotation(jsonTypeInfo)
+                .addAnnotation(jsonSubTypes.build())
+                .build();
+
+        return JavaFile.builder(dtoPkg, typeSpec)
+                .skipJavaLangImports(true)
+                .indent("    ")
+                .build()
+                .toString();
+    }
 }

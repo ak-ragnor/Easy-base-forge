@@ -10,5 +10,13 @@ public record DtoField(
         /** Resolved Java type (e.g. String, Long, List&lt;PetDTO&gt;). */
         String javaType,
         boolean required,
-        List<ValidationConstraint> validations
-) {}
+        List<ValidationConstraint> validations,
+        /** True when the OpenAPI schema has {@code nullable: true}. */
+        boolean nullable
+) {
+    /** Convenience factory for non-nullable fields (most common case). */
+    public static DtoField of(String name, String jsonName, String javaType,
+                               boolean required, List<ValidationConstraint> validations) {
+        return new DtoField(name, jsonName, javaType, required, validations, false);
+    }
+}

@@ -17,6 +17,10 @@ import java.util.stream.Collectors;
  *
  * <p>Grouping strategy: operations are grouped by their first tag. If an operation
  * has no tags, the first path segment is used as the group name.
+ *
+ * <p>Per-resource DTO tracking: the {@link SchemaResolver} session is reset for each resource,
+ * then all of that resource's endpoints are resolved within the session. This ensures that
+ * composed types (oneOf/anyOf variants, etc.) are correctly attributed to the right resource.
  */
 public class ResourceExtractor {
 
@@ -35,33 +39,39 @@ public class ResourceExtractor {
     public List<ApiResource> extract(OpenAPI openApi) {
         if (openApi.getPaths() == null) return List.of();
 
-        // Group (path, method, operation) triples by resource name
-        Map<String, List<ApiEndpoint>> byResource = new LinkedHashMap<>();
+        // Group raw (path, method, operation) triples by resource name — NO schema resolution yet.
+        Map<String, List<OperationEntry>> byResource = new LinkedHashMap<>();
+        openApi.getPaths().forEach((path, pathItem) ->
+                pathItem.readOperationsMap().forEach((httpMethod, operation) -> {
+                    String resourceName = deriveResourceName(path, operation);
+                    byResource.computeIfAbsent(resourceName, k -> new ArrayList<>())
+                              .add(new OperationEntry(path, httpMethod, operation));
+                }));
 
-        openApi.getPaths().forEach((path, pathItem) -> {
-            pathItem.readOperationsMap().forEach((httpMethod, operation) -> {
-                String resourceName = deriveResourceName(path, operation);
-                ApiEndpoint endpoint = mapEndpoint(path, httpMethod, operation);
-                byResource.computeIfAbsent(resourceName, k -> new ArrayList<>()).add(endpoint);
-            });
-        });
-
-        // Pre-register all component schemas so $ref resolution works across resources.
-        // Reset the session afterwards so pre-registration doesn't pollute per-resource tracking.
+        // Pre-register ALL component schemas so $ref resolution works across resources.
+        // This ensures every schema is in the registry before per-resource processing starts.
         if (openApi.getComponents() != null && openApi.getComponents().getSchemas() != null) {
             openApi.getComponents().getSchemas().forEach(schemaResolver::ensureDtoRegistered);
         }
 
-        // Build ApiResource list — process endpoint schemas per resource to track their DTOs
+        // Build each resource within its own session window.
+        // Resolving endpoints INSIDE resetSession/getSessionDtos ensures that any DTOs
+        // "discovered" during schema resolution (e.g. oneOf variants, inline objects) are
+        // correctly attributed to the resource being processed.
         List<ApiResource> result = new ArrayList<>();
-        byResource.forEach((rawName, endpoints) -> {
+        byResource.forEach((rawName, opEntries) -> {
             schemaResolver.resetSession();
-            trackEndpointSchemas(endpoints);
+
+            List<ApiEndpoint> endpoints = opEntries.stream()
+                    .map(e -> mapEndpoint(e.path(), e.httpMethod(), e.operation()))
+                    .collect(Collectors.toList());
+
             List<DtoSchema> dtos = schemaResolver.getSessionDtos();
             String name = SchemaResolver.toPascalCase(rawName);
             String suffix = rawName.toLowerCase();
             result.add(new ApiResource(name, suffix, endpoints, dtos));
         });
+
         return result;
     }
 
@@ -136,38 +146,6 @@ public class ResourceExtractor {
         return result;
     }
 
-    /**
-     * Walks already-built endpoint type names and tells the SchemaResolver to mark
-     * each one as referenced in the current session.
-     */
-    private void trackEndpointSchemas(List<ApiEndpoint> endpoints) {
-        for (ApiEndpoint endpoint : endpoints) {
-            for (ApiParameter param : endpoint.parameters()) {
-                if (param.schema() != null) {
-                    trackTypeName(param.schema().javaType());
-                }
-            }
-            if (endpoint.requestBody() != null && endpoint.requestBody().schema() != null) {
-                trackTypeName(endpoint.requestBody().schema().javaType());
-            }
-            for (ApiResponse response : endpoint.responses().values()) {
-                if (response.schema() != null) {
-                    trackTypeName(response.schema().javaType());
-                }
-            }
-        }
-    }
-
-    /** Tracks a resolved Java type name (unwraps List&lt;X&gt; → X first). */
-    private void trackTypeName(String javaType) {
-        if (javaType == null || javaType.isBlank()) return;
-        if (javaType.startsWith("List<") && javaType.endsWith(">")) {
-            trackTypeName(javaType.substring(5, javaType.length() - 1));
-        } else {
-            schemaResolver.ensureSessionTracked(javaType);
-        }
-    }
-
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
@@ -176,7 +154,6 @@ public class ResourceExtractor {
         if (operation.getTags() != null && !operation.getTags().isEmpty()) {
             return operation.getTags().get(0);
         }
-        // First non-empty path segment, e.g. /pets/{id} → pets
         String[] segments = path.split("/");
         for (String seg : segments) {
             if (!seg.isEmpty() && !seg.startsWith("{")) {
@@ -190,7 +167,6 @@ public class ResourceExtractor {
         if (operationId != null && !operationId.isBlank()) {
             return SchemaResolver.toLowerCamelCase(operationId);
         }
-        // Derive from method + path: GET /pets/{id} → getPetsById
         String pathPart = path.replaceAll("\\{([^}]+)}", "By$1")
                 .replaceAll("[^a-zA-Z0-9]", "_")
                 .replaceAll("_+", "_")
@@ -204,4 +180,7 @@ public class ResourceExtractor {
         }
         return "Request";
     }
+
+    /** Lightweight holder for a raw operation before schema resolution. */
+    private record OperationEntry(String path, PathItem.HttpMethod httpMethod, Operation operation) {}
 }

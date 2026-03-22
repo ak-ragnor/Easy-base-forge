@@ -1,0 +1,122 @@
+openapi: 3.0.3
+info:
+  title: Animals API (oneOf / anyOf / nullable fixture)
+  version: 1.0.0
+
+tags:
+  - name: animals
+    description: Animal operations
+  - name: events
+    description: Event operations
+
+paths:
+
+  /animals:
+    get:
+      tags: [animals]
+      operationId: listAnimals
+      summary: List animals — response uses discriminated oneOf
+      responses:
+        '200':
+          description: An animal (cat or dog)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Animal'
+
+    post:
+      tags: [animals]
+      operationId: createAnimal
+      summary: Create an animal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAnimalRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Animal'
+
+  /events:
+    get:
+      tags: [events]
+      operationId: listEvents
+      summary: Event type uses anyOf without discriminator
+      responses:
+        '200':
+          description: An event payload (generic)
+          content:
+            application/json:
+              schema:
+                anyOf:
+                  - $ref: '#/components/schemas/ClickEvent'
+                  - $ref: '#/components/schemas/HoverEvent'
+
+components:
+  schemas:
+
+    # discriminated oneOf — should produce Animal abstract base + Cat/Dog variants
+    Animal:
+      oneOf:
+        - $ref: '#/components/schemas/Cat'
+        - $ref: '#/components/schemas/Dog'
+      discriminator:
+        propertyName: type
+        mapping:
+          cat: '#/components/schemas/Cat'
+          dog: '#/components/schemas/Dog'
+
+    Cat:
+      type: object
+      required: [type, name]
+      properties:
+        type:
+          type: string
+        name:
+          type: string
+        indoor:
+          type: boolean
+          nullable: true
+
+    Dog:
+      type: object
+      required: [type, name]
+      properties:
+        type:
+          type: string
+        name:
+          type: string
+        breed:
+          type: string
+          nullable: true
+
+    CreateAnimalRequest:
+      type: object
+      required: [type, name]
+      properties:
+        type:
+          type: string
+        name:
+          type: string
+
+    # anyOf without discriminator — ClickEvent and HoverEvent generated as DTOs
+    ClickEvent:
+      type: object
+      properties:
+        x:
+          type: integer
+        y:
+          type: integer
+
+    HoverEvent:
+      type: object
+      properties:
+        elementId:
+          type: string
+        duration:
+          type: integer
