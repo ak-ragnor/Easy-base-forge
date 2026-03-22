@@ -16,7 +16,17 @@ public class ConfigLoader {
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory())
             .findAndRegisterModules();
 
+    /** Loads config resolving {@code output.directory} relative to the config file location. */
     public static GeneratorConfig load(Path configFile) {
+        return load(configFile, null);
+    }
+
+    /**
+     * Loads config and applies {@code outputDirOverride} before validation.
+     * Used by the Maven Mojo and CLI so they can supply the output directory
+     * without requiring it in the config file.
+     */
+    public static GeneratorConfig load(Path configFile, Path outputDirOverride) {
         if (!Files.exists(configFile)) {
             throw new ConfigException("Config file not found: " + configFile.toAbsolutePath());
         }
@@ -28,13 +38,14 @@ public class ConfigLoader {
             throw new ConfigException("Failed to parse config file: " + configFile, e);
         }
 
-        validate(config, configFile);
-
-        if (config.getResolvedOutputDirectory() == null && config.getOutput().getDirectory() != null) {
+        if (outputDirOverride != null) {
+            config.withOutputDirectory(outputDirOverride);
+        } else if (config.getOutput().getDirectory() != null) {
             Path outputDir = configFile.getParent().resolve(config.getOutput().getDirectory()).normalize();
             config.withOutputDirectory(outputDir);
         }
 
+        validate(config, configFile);
         return config;
     }
 
