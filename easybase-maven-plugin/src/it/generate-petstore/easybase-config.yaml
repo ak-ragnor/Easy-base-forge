@@ -2,6 +2,7 @@ basePackage: com.example.petstore
 
 output:
   directory: target/generated-sources/easybase
+  layout: MULTI_MODULE
 
 structure:
   controller:

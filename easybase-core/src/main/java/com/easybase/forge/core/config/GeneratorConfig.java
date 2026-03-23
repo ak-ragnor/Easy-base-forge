@@ -81,12 +81,12 @@ public class GeneratorConfig {
     /**
      * Returns the {@link LayoutStrategy} for this configuration.
      *
-     * <p>Defaults to {@link MultiModuleLayoutStrategy} when no {@code output.layout} is set.
+     * <p>Defaults to {@link FlatLayoutStrategy} when no {@code output.layout} is set.
      */
     public LayoutStrategy getLayoutStrategy() {
         LayoutMode mode = (output != null && output.getLayout() != null)
                 ? output.getLayout()
-                : LayoutMode.MULTI_MODULE;
+                : LayoutMode.FLAT;
         return mode == LayoutMode.FLAT
                 ? new FlatLayoutStrategy(basePackage)
                 : new MultiModuleLayoutStrategy(basePackage);

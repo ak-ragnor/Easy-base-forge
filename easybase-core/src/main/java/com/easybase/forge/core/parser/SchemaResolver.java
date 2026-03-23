@@ -68,7 +68,7 @@ public class SchemaResolver {
             if (resolved != null) {
                 ensureDtoRegistered(refName, resolved);
             }
-            sessionReferenced.add(refName);
+            ensureTransitivesTracked(refName);
             return ApiSchema.of(refName);
         }
 
@@ -88,7 +88,7 @@ public class SchemaResolver {
         if ("object".equals(schema.getType()) || hasProperties(schema)) {
             String className = toPascalCase(hintName);
             ensureDtoRegistered(className, schema);
-            sessionReferenced.add(className);
+            ensureTransitivesTracked(className);
             return ApiSchema.of(className);
         }
 
@@ -289,12 +289,36 @@ public class SchemaResolver {
     }
 
     /**
+     * Adds a schema and all schemas transitively referenced through its fields to the session.
+     *
+     * <p>Uses the return value of {@link Set#add} to detect first-visit, preventing infinite
+     * recursion on self-referential schemas.
+     */
+    private void ensureTransitivesTracked(String className) {
+        if (className == null || !dtoRegistry.containsKey(className)) return;
+        if (!sessionReferenced.add(className)) return;  // Already tracked this session
+
+        DtoSchema dto = dtoRegistry.get(className);
+        if (dto == null) return;
+        for (DtoField field : dto.fields()) {
+            String fieldType = field.javaType();
+            // Unwrap List<X>
+            if (fieldType.startsWith("List<") && fieldType.endsWith(">")) {
+                fieldType = fieldType.substring(5, fieldType.length() - 1);
+            }
+            if (dtoRegistry.containsKey(fieldType)) {
+                ensureTransitivesTracked(fieldType);
+            }
+        }
+    }
+
+    /**
      * Marks a schema name as referenced in the current session.
      * Used by {@link ResourceExtractor} for types already resolved into endpoint records.
      */
     public void ensureSessionTracked(String className) {
         if (className != null && dtoRegistry.containsKey(className)) {
-            sessionReferenced.add(className);
+            ensureTransitivesTracked(className);
         }
     }
 

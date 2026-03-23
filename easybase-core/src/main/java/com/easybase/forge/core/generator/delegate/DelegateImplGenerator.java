@@ -35,6 +35,7 @@ public class DelegateImplGenerator {
                 resource.packageSuffix());
         TypeNameResolver typeResolver = new TypeNameResolver(dtoPkg);
 
+        String implPkg = delegatePkg + ".impl";
         String delegateName = resource.name() + "ApiDelegate";
         String implName = resource.name() + "ApiDelegateImpl";
         ClassName delegateType = ClassName.get(delegatePkg, delegateName);
@@ -48,12 +49,12 @@ public class DelegateImplGenerator {
             classBuilder.addMethod(buildStubMethod(endpoint, typeResolver, config));
         }
 
-        JavaFile javaFile = JavaFile.builder(delegatePkg, classBuilder.build())
+        JavaFile javaFile = JavaFile.builder(implPkg, classBuilder.build())
                 .skipJavaLangImports(true)
                 .indent("    ")
                 .build();
 
-        Path outputPath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), delegatePkg)
+        Path outputPath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), implPkg)
                 .resolve(implName + ".java");
 
         return new GeneratedArtifact(outputPath, ArtifactType.DELEGATE_IMPL, javaFile.toString());

@@ -10,12 +10,15 @@ import com.easybase.forge.core.generator.delegate.DelegateGenerator;
 import com.easybase.forge.core.generator.delegate.DelegateImplGenerator;
 import com.easybase.forge.core.generator.dto.DtoGenerator;
 import com.easybase.forge.core.model.ApiResource;
+import com.easybase.forge.core.model.DtoSchema;
 
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Builds the list of {@link GenerationUnit}s for a full generation run.
@@ -42,15 +45,20 @@ public class GenerationPlan {
     public List<GenerationUnit> build(List<ApiResource> resources, GeneratorConfig config) {
         List<GenerationUnit> units = new ArrayList<>();
 
-        // Flat layout: detect DTO class name collisions across resources before writing anything
-        if (config.getLayoutStrategy().mode() == LayoutMode.FLAT) {
-            checkFlatLayoutConflicts(resources, config);
+        if (config.getLayoutStrategy().mode() == LayoutMode.MULTI_MODULE) {
+            // Multi-module layout: detect schemas shared across resources (would produce duplicate classes)
+            checkMultiModuleConflicts(resources);
         }
 
+        // In FLAT layout, multiple resources may reference the same shared schema — deduplicate by output path
+        Set<String> usedDtoPaths = new HashSet<>();
+
         for (ApiResource resource : resources) {
-            // DTOs — always overwrite
+            // DTOs — always overwrite (skip if already queued from a previous resource in FLAT layout)
             for (GeneratedArtifact dto : dtoGen.generate(resource, config)) {
-                units.add(new GenerationUnit(dto, true));
+                if (usedDtoPaths.add(dto.outputPath().toString())) {
+                    units.add(new GenerationUnit(dto, true));
+                }
             }
 
             // Delegate — always overwrite
@@ -76,29 +84,29 @@ public class GenerationPlan {
     }
 
     /**
-     * Verifies that no two resources would produce a DTO with the same output path.
+     * Verifies that no two resources share the same DTO schema name in MULTI_MODULE layout.
      *
-     * <p>With flat layout all resources share the same packages, so a {@code PetDTO} from
-     * resource {@code pets} and a {@code PetDTO} from resource {@code archive} would collide.
+     * <p>MULTI_MODULE generates a separate DTO package per resource, so a schema referenced
+     * by two tags would produce two incompatible classes in different packages.
+     * Users should switch to FLAT layout to share schemas across tags.
      *
-     * @throws ConfigException if a collision is detected
+     * @throws ConfigException if a shared schema is detected
      */
-    private void checkFlatLayoutConflicts(List<ApiResource> resources, GeneratorConfig config) {
-        // Map from output-path → first resource that claimed it
+    private void checkMultiModuleConflicts(List<ApiResource> resources) {
         Map<String, String> seen = new HashMap<>();
-
         for (ApiResource resource : resources) {
-            for (GeneratedArtifact dto : dtoGen.generate(resource, config)) {
-                String pathKey = dto.outputPath().toString();
-                String existing = seen.put(pathKey, resource.name());
+            for (DtoSchema schema : resource.dtoSchemas()) {
+                String existing = seen.put(schema.className(), resource.name());
                 if (existing != null) {
                     throw new ConfigException(
-                            "Flat layout conflict: resources '" + existing + "' and '"
-                            + resource.name() + "' both generate a DTO at '"
-                            + dto.outputPath().getFileName()
-                            + "'. Use MULTI_MODULE layout or rename one of the schemas.");
+                            "MULTI_MODULE layout: schema '" + schema.className() + "' is shared by "
+                            + "resources '" + existing + "' and '" + resource.name() + "'. "
+                            + "MULTI_MODULE generates a separate DTO package per resource, so "
+                            + "schemas cannot be shared across tags. "
+                            + "Use 'output.layout: FLAT' instead.");
                 }
             }
         }
     }
+
 }
