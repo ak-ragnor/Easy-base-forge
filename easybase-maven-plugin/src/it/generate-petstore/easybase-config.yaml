@@ -1,5 +1,8 @@
 basePackage: com.example.petstore
 
+output:
+  directory: target/generated-sources/easybase
+
 structure:
   controller:
     package: "{basePackage}.{resource}.controller"

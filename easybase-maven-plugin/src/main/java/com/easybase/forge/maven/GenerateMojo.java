@@ -51,9 +51,10 @@ public class GenerateMojo extends AbstractMojo {
 
     /**
      * Output directory for generated sources.
+     * If not set, falls back to {@code output.directory} in easybase-config.yaml.
      * Automatically added to the project's compile source roots.
      */
-    @Parameter(defaultValue = "${project.build.directory}/generated-sources/easybase")
+    @Parameter
     private File outputDirectory;
 
     /** Set to {@code true} to skip generation entirely. */
@@ -74,14 +75,17 @@ public class GenerateMojo extends AbstractMojo {
 
         getLog().info("EasyBase: generating from " + specFile);
         getLog().info("EasyBase: config     " + configFile);
-        getLog().info("EasyBase: output     " + outputDirectory);
 
         GeneratorConfig config;
         try {
-            config = ConfigLoader.load(configFile.toPath(), outputDirectory.toPath());
+            Path outputOverride = outputDirectory != null ? outputDirectory.toPath() : null;
+            config = ConfigLoader.load(configFile.toPath(), outputOverride);
         } catch (ConfigException e) {
             throw new MojoExecutionException("Failed to load EasyBase config: " + e.getMessage(), e);
         }
+
+        Path resolvedOutput = config.getResolvedOutputDirectory();
+        getLog().info("EasyBase: output     " + resolvedOutput);
 
         GenerationReport report;
         try {
@@ -101,8 +105,8 @@ public class GenerateMojo extends AbstractMojo {
         }
 
         // Register output dir so the compiler picks up generated sources
-        project.addCompileSourceRoot(outputDirectory.getAbsolutePath());
-        getLog().info("EasyBase: added " + outputDirectory + " to compile source roots.");
+        project.addCompileSourceRoot(resolvedOutput.toAbsolutePath().toString());
+        getLog().info("EasyBase: added " + resolvedOutput + " to compile source roots.");
     }
 
     private void validateParameters() throws MojoExecutionException {
