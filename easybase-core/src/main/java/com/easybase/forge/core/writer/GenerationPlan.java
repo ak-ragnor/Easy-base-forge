@@ -7,6 +7,7 @@ import com.easybase.forge.core.generator.GeneratedArtifact;
 import com.easybase.forge.core.generator.controller.BaseControllerGenerator;
 import com.easybase.forge.core.generator.controller.CustomControllerGenerator;
 import com.easybase.forge.core.generator.delegate.DelegateGenerator;
+import com.easybase.forge.core.generator.delegate.DelegateImplGenerator;
 import com.easybase.forge.core.generator.dto.DtoGenerator;
 import com.easybase.forge.core.model.ApiResource;
 
@@ -34,6 +35,7 @@ public class GenerationPlan {
 
     private final DtoGenerator dtoGen = new DtoGenerator();
     private final DelegateGenerator delegateGen = new DelegateGenerator();
+    private final DelegateImplGenerator delegateImplGen = new DelegateImplGenerator();
     private final BaseControllerGenerator baseCtrlGen = new BaseControllerGenerator();
     private final CustomControllerGenerator customCtrlGen = new CustomControllerGenerator();
 
@@ -53,6 +55,13 @@ public class GenerationPlan {
 
             // Delegate — always overwrite
             units.add(new GenerationUnit(delegateGen.generate(resource, config), true));
+
+            // Delegate impl — create only (preserve if exists)
+            if (config.getGenerate().isDelegateImpl()) {
+                GeneratedArtifact delegateImpl = delegateImplGen.generate(resource, config);
+                boolean implExists = Files.exists(delegateImpl.outputPath());
+                units.add(new GenerationUnit(delegateImpl, !implExists));
+            }
 
             // Base controller — always overwrite
             units.add(new GenerationUnit(baseCtrlGen.generate(resource, config), true));

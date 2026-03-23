@@ -31,7 +31,6 @@ public class BaseControllerGenerator {
     private static final ClassName REQUEST_PARAM   = ClassName.get("org.springframework.web.bind.annotation", "RequestParam");
     private static final ClassName REQUEST_BODY    = ClassName.get("org.springframework.web.bind.annotation", "RequestBody");
     private static final ClassName VALID           = ClassName.get("jakarta.validation", "Valid");
-    private static final ClassName RESPONSE_ENTITY = ClassName.get("org.springframework.http", "ResponseEntity");
 
     public GeneratedArtifact generate(ApiResource resource, GeneratorConfig config) {
         String basePkg = config.resolvePackage(
@@ -130,22 +129,9 @@ public class BaseControllerGenerator {
         String delegateCall = "delegate." + endpoint.operationId() + "(" + argList + ")";
 
         boolean isVoid = returnType.equals(TypeName.VOID);
-        boolean isResponseEntity = returnType.toString().startsWith("org.springframework.http.ResponseEntity");
-        ApiResponse primary = endpoint.primaryResponse();
-        boolean noBody = primary == null || primary.schema() == null
-                || "Void".equals(primary.schema().javaType());
 
         if (isVoid) {
             mb.addStatement(delegateCall);
-        } else if (isResponseEntity && noBody) {
-            mb.addStatement("return $T.noContent().build()", RESPONSE_ENTITY);
-        } else if (isResponseEntity) {
-            int statusCode = primary != null ? primary.statusCode() : 200;
-            if (statusCode == 201) {
-                mb.addStatement("return $T.status(201).body($L)", RESPONSE_ENTITY, delegateCall);
-            } else {
-                mb.addStatement("return $T.ok($L)", RESPONSE_ENTITY, delegateCall);
-            }
         } else {
             mb.addStatement("return $L", delegateCall);
         }

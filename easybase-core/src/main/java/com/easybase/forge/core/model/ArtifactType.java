@@ -8,5 +8,7 @@ public enum ArtifactType {
     /** Generated delegate interface — always overwritten. */
     DELEGATE,
     /** Generated DTO class — always overwritten. */
-    DTO
+    DTO,
+    /** Generated no-op delegate implementation — only created, never overwritten. */
+    DELEGATE_IMPL
 }
