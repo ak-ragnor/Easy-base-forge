@@ -33,7 +33,6 @@ public class GeneratorConfig {
     private StructureConfig structure = new StructureConfig();
     private GenerateOptions generate = new GenerateOptions();
 
-    /** Resolved output directory (may be set programmatically by Maven/CLI). */
     private Path resolvedOutputDirectory;
 
     public String getBasePackage() {
@@ -72,7 +71,6 @@ public class GeneratorConfig {
         return resolvedOutputDirectory;
     }
 
-    /** Override the output directory (used by Maven Mojo or CLI). */
     public GeneratorConfig withOutputDirectory(Path outputDirectory) {
         this.resolvedOutputDirectory = outputDirectory;
         return this;

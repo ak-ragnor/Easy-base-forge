@@ -12,7 +12,6 @@ public class AnnotationBuilder {
     private static final String JAKARTA_CONSTRAINTS = "jakarta.validation.constraints";
 
     public static AnnotationSpec build(ValidationConstraint constraint) {
-        // instanceof pattern matching (Java 16+) — switch patterns on sealed types need Java 21
         if (constraint instanceof ValidationConstraint.NotNull) {
             return AnnotationSpec.builder(ClassName.get(JAKARTA_CONSTRAINTS, "NotNull")).build();
         }

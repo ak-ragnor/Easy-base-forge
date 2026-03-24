@@ -283,44 +283,6 @@ public class PetsService implements PetsApiDelegate {
 
 ---
 
-## Publishing to Maven Central
-
-The `release` profile bundles sources, Javadoc, and GPG signatures, then publishes via the Central Publisher Portal.
-
-### Prerequisites
-
-1. Account at [central.sonatype.com](https://central.sonatype.com) with namespace `com.easybase` verified.
-2. GPG key published to `keyserver.ubuntu.com`.
-3. Token stored in `~/.m2/settings.xml`:
-   ```xml
-   <server>
-       <id>central</id>
-       <username>your-token-username</username>
-       <password>your-token-password</password>
-   </server>
-   ```
-
-### Release steps
-
-```bash
-# 1. Set the release version
-mvn versions:set -DnewVersion=0.1.0 -DgenerateBackupPoms=false
-
-# 2. Build, sign, and stage to Central
-mvn deploy -Prelease --batch-mode
-
-# 3. Log into central.sonatype.com → Deployments → publish the staged bundle
-
-# 4. Tag and bump to next snapshot
-git tag v0.1.0
-mvn versions:set -DnewVersion=0.2.0-SNAPSHOT -DgenerateBackupPoms=false
-git add pom.xml '**/pom.xml'
-git commit -m "chore: bump to 0.2.0-SNAPSHOT"
-git push && git push --tags
-```
-
----
-
 ## Building from Source
 
 ```bash
@@ -337,21 +299,3 @@ mvn package -pl easybase-cli -am -DskipTests
 java -jar easybase-cli/target/easybase-cli-*.jar generate path/to/api.yaml
 ```
 
----
-
-## Project Layout
-
-```
-easy-base-forge/
-├── easybase-core/          ← parser, generators, writer — no Maven/picocli deps
-├── easybase-maven-plugin/  ← thin GenerateMojo wrapping GeneratorEngine
-├── easybase-cli/           ← picocli CLI, fat JAR via maven-shade-plugin
-├── easybase-test-fixtures/ ← shared OpenAPI spec fixtures
-└── easybase-gradle-plugin/ ← stub (future)
-```
-
----
-
-## License
-
-Apache License 2.0 — see [LICENSE](LICENSE).
