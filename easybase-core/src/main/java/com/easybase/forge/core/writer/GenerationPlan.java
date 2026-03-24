@@ -5,6 +5,7 @@ import com.easybase.forge.core.config.GeneratorConfig;
 import com.easybase.forge.core.config.LayoutMode;
 import com.easybase.forge.core.generator.GeneratedArtifact;
 import com.easybase.forge.core.generator.controller.BaseControllerGenerator;
+import com.easybase.forge.core.model.ArtifactType;
 import com.easybase.forge.core.generator.controller.CustomControllerGenerator;
 import com.easybase.forge.core.generator.delegate.DelegateGenerator;
 import com.easybase.forge.core.generator.delegate.DelegateImplGenerator;
@@ -64,11 +65,13 @@ public class GenerationPlan {
             // Delegate — always overwrite
             units.add(new GenerationUnit(delegateGen.generate(resource, config), true));
 
-            // Delegate impl — create only (preserve if exists)
+            // Delegate impl — base always overwritten; user impl create-once
             if (config.getGenerate().isDelegateImpl()) {
-                GeneratedArtifact delegateImpl = delegateImplGen.generate(resource, config);
-                boolean implExists = Files.exists(delegateImpl.outputPath());
-                units.add(new GenerationUnit(delegateImpl, !implExists));
+                for (GeneratedArtifact artifact : delegateImplGen.generate(resource, config)) {
+                    boolean isBase = artifact.artifactType() == ArtifactType.DELEGATE_IMPL_BASE;
+                    boolean overwrite = isBase || !Files.exists(artifact.outputPath());
+                    units.add(new GenerationUnit(artifact, overwrite));
+                }
             }
 
             // Base controller — always overwrite

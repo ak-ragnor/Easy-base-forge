@@ -15,18 +15,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Generates the {@code {Resource}ApiDelegateImpl} stub class for a resource.
+ * Generates the delegate implementation pair for a resource:
+ *
+ * <ol>
+ *   <li>{@code {Resource}ApiDelegateImplBase} in {@code delegate.impl.base} — abstract class
+ *       implementing the delegate interface with stub methods. Always overwritten on regeneration,
+ *       so new endpoints automatically appear here.</li>
+ *   <li>{@code {Resource}ApiDelegateImpl} in {@code delegate.impl} — concrete {@code @Component}
+ *       class extending the base. Created once and never overwritten; users place business
+ *       logic here by overriding only the methods they need.</li>
+ * </ol>
  *
  * <p>Only produced when {@code generate.delegateImpl: true} is set in the config.
- * This file is created once and never overwritten — users fill in the business logic.
- * Each method throws {@link UnsupportedOperationException} until implemented.
  */
 public class DelegateImplGenerator {
 
     private static final ClassName COMPONENT =
             ClassName.get("org.springframework.stereotype", "Component");
 
-    public GeneratedArtifact generate(ApiResource resource, GeneratorConfig config) {
+    public List<GeneratedArtifact> generate(ApiResource resource, GeneratorConfig config) {
         String delegatePkg = config.resolvePackage(
                 config.getStructure().getDelegate().getPkg(),
                 resource.packageSuffix());
@@ -36,28 +43,50 @@ public class DelegateImplGenerator {
         TypeNameResolver typeResolver = new TypeNameResolver(dtoPkg);
 
         String implPkg = delegatePkg + ".impl";
-        String delegateName = resource.name() + "ApiDelegate";
-        String implName = resource.name() + "ApiDelegateImpl";
-        ClassName delegateType = ClassName.get(delegatePkg, delegateName);
+        String basePkg  = implPkg + ".base";
 
-        TypeSpec.Builder classBuilder = TypeSpec.classBuilder(implName)
-                .addModifiers(Modifier.PUBLIC)
-                .addAnnotation(COMPONENT)
+        String delegateName = resource.name() + "ApiDelegate";
+        String baseName     = resource.name() + "ApiDelegateImplBase";
+        String implName     = resource.name() + "ApiDelegateImpl";
+
+        ClassName delegateType = ClassName.get(delegatePkg, delegateName);
+        ClassName baseType     = ClassName.get(basePkg, baseName);
+
+        // ── Base: abstract class with all stubs (always overwritten) ─────────
+        TypeSpec.Builder baseBuilder = TypeSpec.classBuilder(baseName)
+                .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .addSuperinterface(delegateType);
 
         for (ApiEndpoint endpoint : resource.endpoints()) {
-            classBuilder.addMethod(buildStubMethod(endpoint, typeResolver, config));
+            baseBuilder.addMethod(buildStubMethod(endpoint, typeResolver, config));
         }
 
-        JavaFile javaFile = JavaFile.builder(implPkg, classBuilder.build())
+        JavaFile baseFile = JavaFile.builder(basePkg, baseBuilder.build())
                 .skipJavaLangImports(true)
                 .indent("    ")
                 .build();
 
-        Path outputPath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), implPkg)
+        Path basePath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), basePkg)
+                .resolve(baseName + ".java");
+
+        // ── Impl: empty @Component class extending the base (create-once) ────
+        TypeSpec.Builder implBuilder = TypeSpec.classBuilder(implName)
+                .addModifiers(Modifier.PUBLIC)
+                .addAnnotation(COMPONENT)
+                .superclass(baseType);
+
+        JavaFile implFile = JavaFile.builder(implPkg, implBuilder.build())
+                .skipJavaLangImports(true)
+                .indent("    ")
+                .build();
+
+        Path implPath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), implPkg)
                 .resolve(implName + ".java");
 
-        return new GeneratedArtifact(outputPath, ArtifactType.DELEGATE_IMPL, javaFile.toString());
+        List<GeneratedArtifact> artifacts = new ArrayList<>();
+        artifacts.add(new GeneratedArtifact(basePath, ArtifactType.DELEGATE_IMPL_BASE, baseFile.toString()));
+        artifacts.add(new GeneratedArtifact(implPath, ArtifactType.DELEGATE_IMPL, implFile.toString()));
+        return artifacts;
     }
 
     private MethodSpec buildStubMethod(ApiEndpoint endpoint, TypeNameResolver typeResolver,

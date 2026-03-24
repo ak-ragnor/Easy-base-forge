@@ -176,7 +176,7 @@ public class SchemaResolver {
         }
 
         // Discriminated union — build the abstract base class
-        String baseName = toPascalCase(hintName) + "Base";
+        String baseName = toPascalCase(hintName);
         Map<String, String> explicitMapping = discriminator.getMapping() != null
                 ? discriminator.getMapping() : Map.of();
 

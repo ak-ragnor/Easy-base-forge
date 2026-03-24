@@ -13,8 +13,9 @@ import java.nio.file.Paths;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Verifies DelegateImpl generation: placement in the .impl sub-package,
- * @Component annotation, and stub method bodies.
+ * Verifies the DelegateImpl base/impl split:
+ * - {Resource}ApiDelegateImplBase in delegate.impl.base (always overwritten, all stubs)
+ * - {Resource}ApiDelegateImpl in delegate.impl (create-once, @Component, extends base)
  */
 class DelegateImplTest {
 
@@ -43,6 +44,48 @@ class DelegateImplTest {
         return Paths.get(url.toURI());
     }
 
+    // ── Base class ────────────────────────────────────────────────────────────
+
+    @Test
+    void delegateImplBase_placedInImplBaseSubPackage() throws Exception {
+        engine().generate(specPath());
+
+        Path baseFile = outputDir.resolve(
+                "com/example/api/pets/delegate/impl/base/PetsApiDelegateImplBase.java");
+        assertThat(baseFile).exists();
+    }
+
+    @Test
+    void delegateImplBase_isAbstractAndImplementsDelegate() throws Exception {
+        engine().generate(specPath());
+
+        String content = Files.readString(outputDir.resolve(
+                "com/example/api/pets/delegate/impl/base/PetsApiDelegateImplBase.java"));
+        assertThat(content).contains("abstract class PetsApiDelegateImplBase");
+        assertThat(content).contains("implements PetsApiDelegate");
+    }
+
+    @Test
+    void delegateImplBase_hasNoComponentAnnotation() throws Exception {
+        engine().generate(specPath());
+
+        String content = Files.readString(outputDir.resolve(
+                "com/example/api/pets/delegate/impl/base/PetsApiDelegateImplBase.java"));
+        assertThat(content).doesNotContain("@Component");
+    }
+
+    @Test
+    void delegateImplBase_methodsThrowUnsupported() throws Exception {
+        engine().generate(specPath());
+
+        String content = Files.readString(outputDir.resolve(
+                "com/example/api/pets/delegate/impl/base/PetsApiDelegateImplBase.java"));
+        assertThat(content).contains("Not implemented");
+        assertThat(content).contains("UnsupportedOperationException");
+    }
+
+    // ── Impl class ───────────────────────────────────────────────────────────
+
     @Test
     void delegateImpl_placedInImplSubPackage() throws Exception {
         engine().generate(specPath());
@@ -53,35 +96,24 @@ class DelegateImplTest {
     }
 
     @Test
+    void delegateImpl_hasComponentAndExtendsBase() throws Exception {
+        engine().generate(specPath());
+
+        String content = Files.readString(outputDir.resolve(
+                "com/example/api/pets/delegate/impl/PetsApiDelegateImpl.java"));
+        assertThat(content).contains("@Component");
+        assertThat(content).contains("extends PetsApiDelegateImplBase");
+    }
+
+    @Test
     void delegateImpl_notInParentDelegatePackage() throws Exception {
         engine().generate(specPath());
 
-        Path wrongLocation = outputDir.resolve(
-                "com/example/api/pets/delegate/PetsApiDelegateImpl.java");
-        assertThat(wrongLocation).doesNotExist();
+        assertThat(outputDir.resolve(
+                "com/example/api/pets/delegate/PetsApiDelegateImpl.java")).doesNotExist();
     }
 
-    @Test
-    void delegateImpl_hasComponentAnnotationAndImplementsDelegate() throws Exception {
-        engine().generate(specPath());
-
-        String content = Files.readString(outputDir.resolve(
-                "com/example/api/pets/delegate/impl/PetsApiDelegateImpl.java"));
-
-        assertThat(content).contains("@Component");
-        assertThat(content).contains("implements PetsApiDelegate");
-    }
-
-    @Test
-    void delegateImpl_methodsThrowUnsupported() throws Exception {
-        engine().generate(specPath());
-
-        String content = Files.readString(outputDir.resolve(
-                "com/example/api/pets/delegate/impl/PetsApiDelegateImpl.java"));
-
-        assertThat(content).contains("Not implemented");
-        assertThat(content).contains("UnsupportedOperationException");
-    }
+    // ── Both resources ───────────────────────────────────────────────────────
 
     @Test
     void delegateImpl_generatedForEachResource() throws Exception {
@@ -89,7 +121,11 @@ class DelegateImplTest {
 
         // petstore.yaml has two tags: pets and orders
         assertThat(outputDir.resolve(
+                "com/example/api/pets/delegate/impl/base/PetsApiDelegateImplBase.java")).exists();
+        assertThat(outputDir.resolve(
                 "com/example/api/pets/delegate/impl/PetsApiDelegateImpl.java")).exists();
+        assertThat(outputDir.resolve(
+                "com/example/api/orders/delegate/impl/base/OrdersApiDelegateImplBase.java")).exists();
         assertThat(outputDir.resolve(
                 "com/example/api/orders/delegate/impl/OrdersApiDelegateImpl.java")).exists();
     }

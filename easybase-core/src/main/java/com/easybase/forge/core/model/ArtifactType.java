@@ -9,6 +9,8 @@ public enum ArtifactType {
     DELEGATE,
     /** Generated DTO class — always overwritten. */
     DTO,
-    /** Generated no-op delegate implementation — only created, never overwritten. */
+    /** Generated abstract stub base for delegate impl — always overwritten. */
+    DELEGATE_IMPL_BASE,
+    /** User-owned delegate implementation extending the base — only created, never overwritten. */
     DELEGATE_IMPL
 }

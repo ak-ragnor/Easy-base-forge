@@ -45,11 +45,11 @@ class OneOfAnyOfTest {
     void discriminatedOneOf_abstractBaseGenerated() throws Exception {
         engine().generate(specPath());
 
-        Path animalBase = outputDir.resolve("com/example/api/animals/dto/AnimalBase.java");
-        assertThat(animalBase).exists();
+        Path animalFile = outputDir.resolve("com/example/api/animals/dto/Animal.java");
+        assertThat(animalFile).exists();
 
-        String content = Files.readString(animalBase);
-        assertThat(content).contains("abstract class AnimalBase");
+        String content = Files.readString(animalFile);
+        assertThat(content).contains("abstract class Animal");
         assertThat(content).contains("@JsonTypeInfo");
         assertThat(content).contains("property = \"type\"");
         assertThat(content).contains("@JsonSubTypes");
@@ -68,8 +68,8 @@ class OneOfAnyOfTest {
         assertThat(catFile).exists();
         assertThat(dogFile).exists();
 
-        assertThat(Files.readString(catFile)).contains("class Cat extends AnimalBase");
-        assertThat(Files.readString(dogFile)).contains("class Dog extends AnimalBase");
+        assertThat(Files.readString(catFile)).contains("class Cat extends Animal");
+        assertThat(Files.readString(dogFile)).contains("class Dog extends Animal");
     }
 
     @Test
@@ -86,15 +86,16 @@ class OneOfAnyOfTest {
     }
 
     @Test
-    void discriminatedOneOf_delegateUsesBaseAsReturnType() throws Exception {
+    void discriminatedOneOf_delegateUsesSchemaNameAsReturnType() throws Exception {
         engine().generate(specPath());
 
         Path delegate = outputDir.resolve("com/example/api/animals/delegate/AnimalsApiDelegate.java");
         assertThat(delegate).exists();
 
         String content = Files.readString(delegate);
-        // The method returning an Animal should use AnimalBase as the return type
-        assertThat(content).contains("AnimalBase");
+        // The method returning an Animal uses the schema name directly (no "Base" suffix)
+        assertThat(content).contains("Animal");
+        assertThat(content).doesNotContain("AnimalBase");
     }
 
     // ── anyOf without discriminator ──────────────────────────────────────────
