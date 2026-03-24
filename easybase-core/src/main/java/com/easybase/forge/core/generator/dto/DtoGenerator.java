@@ -44,7 +44,7 @@ public class DtoGenerator {
         List<GeneratedArtifact> artifacts = new ArrayList<>();
         for (DtoSchema schema : resource.dtoSchemas()) {
             String content = schema.union() != null
-                    ? generateUnionBase(schema, dtoPkg)
+                    ? generateUnionBase(schema, dtoPkg, config)
                     : generateDto(schema, dtoPkg, typeResolver, config);
 
             Path outputPath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), dtoPkg)
@@ -61,6 +61,8 @@ public class DtoGenerator {
         TypeSpec.Builder classBuilder = TypeSpec.classBuilder(schema.className())
                 .addModifiers(Modifier.PUBLIC)
                 .addAnnotation(ClassName.get("lombok", "Data"));
+
+        addGeneratedJavadoc(classBuilder, config);
 
         // Union variant: extend the abstract base
         if (schema.parentClass() != null) {
@@ -102,9 +104,20 @@ public class DtoGenerator {
         return javaFile.toString();
     }
 
+    private static void addGeneratedJavadoc(TypeSpec.Builder classBuilder, GeneratorConfig config) {
+        if (!config.getGenerate().isAddGeneratedAnnotation()) return;
+        StringBuilder doc = new StringBuilder();
+        String author = config.getGenerate().getAuthor();
+        if (author != null && !author.isBlank()) {
+            doc.append("@author ").append(author).append("\n");
+        }
+        doc.append("@generated\n");
+        classBuilder.addJavadoc(doc.toString());
+    }
+
     // ── Abstract union base ───────────────────────────────────────────────────
 
-    private String generateUnionBase(DtoSchema schema, String dtoPkg) {
+    private String generateUnionBase(DtoSchema schema, String dtoPkg, GeneratorConfig config) {
         UnionDiscriminator union = schema.union();
 
         // @JsonTypeInfo(use = NAME, include = PROPERTY, property = "discriminatorProp")
@@ -124,13 +137,14 @@ public class DtoGenerator {
             jsonSubTypes.addMember("value", "$L", typeAnnotation);
         }
 
-        TypeSpec typeSpec = TypeSpec.classBuilder(schema.className())
+        TypeSpec.Builder typeBuilder = TypeSpec.classBuilder(schema.className())
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
                 .addAnnotation(jsonTypeInfo)
-                .addAnnotation(jsonSubTypes.build())
-                .build();
+                .addAnnotation(jsonSubTypes.build());
 
-        return JavaFile.builder(dtoPkg, typeSpec)
+        addGeneratedJavadoc(typeBuilder, config);
+
+        return JavaFile.builder(dtoPkg, typeBuilder.build())
                 .skipJavaLangImports(true)
                 .indent("    ")
                 .build()

@@ -35,6 +35,8 @@ public class DelegateGenerator {
         TypeSpec.Builder interfaceBuilder = TypeSpec.interfaceBuilder(delegateName)
                 .addModifiers(Modifier.PUBLIC);
 
+        addGeneratedJavadoc(interfaceBuilder, config);
+
         for (ApiEndpoint endpoint : resource.endpoints()) {
             MethodSpec method = buildMethod(endpoint, typeResolver,
                     config.getGenerate().getResponseEntityWrapping(),
@@ -125,5 +127,16 @@ public class DelegateGenerator {
     private static String deriveBodyParamName(String javaType) {
         if (javaType == null || javaType.isEmpty()) return "body";
         return Character.toLowerCase(javaType.charAt(0)) + javaType.substring(1);
+    }
+
+    private static void addGeneratedJavadoc(TypeSpec.Builder builder, GeneratorConfig config) {
+        if (!config.getGenerate().isAddGeneratedAnnotation()) return;
+        StringBuilder doc = new StringBuilder();
+        String author = config.getGenerate().getAuthor();
+        if (author != null && !author.isBlank()) {
+            doc.append("@author ").append(author).append("\n");
+        }
+        doc.append("@generated\n");
+        builder.addJavadoc(doc.toString());
     }
 }

@@ -77,10 +77,10 @@ class LayoutStrategyTest {
     // ── GeneratorConfig delegation ─────────────────────────────────────────
 
     @Test
-    void generatorConfig_defaultsToMultiModule() {
+    void generatorConfig_defaultsToFlat() {
         GeneratorConfig config = new GeneratorConfig();
         config.setBasePackage("com.example");
-        assertThat(config.getLayoutStrategy().mode()).isEqualTo(LayoutMode.MULTI_MODULE);
+        assertThat(config.getLayoutStrategy().mode()).isEqualTo(LayoutMode.FLAT);
     }
 
     @Test

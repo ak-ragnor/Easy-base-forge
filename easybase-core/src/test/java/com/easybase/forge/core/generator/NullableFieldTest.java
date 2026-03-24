@@ -24,6 +24,11 @@ class NullableFieldTest {
     private GeneratorEngine engine() {
         GeneratorConfig config = new GeneratorConfig();
         config.setBasePackage("com.example.api");
+
+        OutputConfig output = new OutputConfig();
+        output.setLayout(LayoutMode.MULTI_MODULE);
+        config.setOutput(output);
+
         config.withOutputDirectory(outputDir);
         return new GeneratorEngine(config);
     }

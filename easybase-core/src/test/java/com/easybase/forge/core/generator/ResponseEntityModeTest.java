@@ -28,6 +28,10 @@ class ResponseEntityModeTest {
         opts.setResponseEntityWrapping(mode);
         config.setGenerate(opts);
 
+        OutputConfig output = new OutputConfig();
+        output.setLayout(LayoutMode.MULTI_MODULE);
+        config.setOutput(output);
+
         config.withOutputDirectory(outputDir);
         return new GeneratorEngine(config);
     }

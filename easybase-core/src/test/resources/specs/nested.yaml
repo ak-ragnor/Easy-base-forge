@@ -1,0 +1,91 @@
+openapi: 3.0.3
+info:
+  title: Nested Ref API (transitive schema fixture)
+  version: 1.0.0
+
+tags:
+  - name: pets
+    description: Pet operations
+  - name: orders
+    description: Order operations
+
+paths:
+
+  /pets/{id}:
+    get:
+      tags: [pets]
+      operationId: getPet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetDTO'
+
+  /orders/{id}:
+    get:
+      tags: [orders]
+      operationId: getOrder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDTO'
+
+components:
+  schemas:
+
+    # Shared across both tags — tests transitive tracking
+    CategoryDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    # PetDTO refs CategoryDTO transitively
+    PetDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          $ref: '#/components/schemas/CategoryDTO'
+
+    # AddressDTO is only referenced by OrderDTO (deep transitive)
+    AddressDTO:
+      type: object
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+
+    # OrderDTO refs CategoryDTO AND AddressDTO transitively
+    OrderDTO:
+      type: object
+      properties:
+        id:
+          type: integer
+        category:
+          $ref: '#/components/schemas/CategoryDTO'
+        shippingAddress:
+          $ref: '#/components/schemas/AddressDTO'

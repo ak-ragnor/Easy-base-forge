@@ -70,7 +70,7 @@ class FlatLayoutConflictTest {
     }
 
     @Test
-    void flat_conflictingDtoNames_throwsConfigException() throws Exception {
+    void flat_sharedSchema_deduplicatedSilently() throws Exception {
         GeneratorConfig config = new GeneratorConfig();
         config.setBasePackage("com.example.api");
         OutputConfig output = new OutputConfig();
@@ -78,16 +78,35 @@ class FlatLayoutConflictTest {
         config.setOutput(output);
         config.withOutputDirectory(outputDir);
 
-        // Build two resources that each have a DTO named "SharedDTO"
+        // Two resources sharing the same DTO name — should deduplicate silently
         DtoSchema sharedDto = DtoSchema.of("SharedDTO", "com.example.api.dto", List.of());
         ApiResource resource1 = new ApiResource("Pets", "pets", List.of(), List.of(sharedDto));
         ApiResource resource2 = new ApiResource("Orders", "orders", List.of(), List.of(sharedDto));
 
-        GenerationPlan plan = new GenerationPlan();
+        List<GenerationUnit> units = new GenerationPlan().build(List.of(resource1, resource2), config);
 
-        assertThatThrownBy(() -> plan.build(List.of(resource1, resource2), config))
+        long dtoCount = units.stream()
+                .filter(u -> u.artifact().outputPath().toString().endsWith("SharedDTO.java"))
+                .count();
+        assertThat(dtoCount).isEqualTo(1);
+    }
+
+    @Test
+    void multiModule_sharedSchema_throwsConfigException() throws Exception {
+        GeneratorConfig config = new GeneratorConfig();
+        config.setBasePackage("com.example.api");
+        OutputConfig output = new OutputConfig();
+        output.setLayout(LayoutMode.MULTI_MODULE);
+        config.setOutput(output);
+        config.withOutputDirectory(outputDir);
+
+        DtoSchema sharedDto = DtoSchema.of("SharedDTO", "com.example.api.dto", List.of());
+        ApiResource resource1 = new ApiResource("Pets", "pets", List.of(), List.of(sharedDto));
+        ApiResource resource2 = new ApiResource("Orders", "orders", List.of(), List.of(sharedDto));
+
+        assertThatThrownBy(() -> new GenerationPlan().build(List.of(resource1, resource2), config))
                 .isInstanceOf(ConfigException.class)
-                .hasMessageContaining("Flat layout conflict")
+                .hasMessageContaining("MULTI_MODULE layout")
                 .hasMessageContaining("SharedDTO");
     }
 }

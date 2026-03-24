@@ -1,6 +1,7 @@
 package com.easybase.forge.core.engine;
 
 import com.easybase.forge.core.config.GeneratorConfig;
+import com.easybase.forge.core.config.LayoutMode;
 import com.easybase.forge.core.config.OutputConfig;
 import com.easybase.forge.core.writer.GenerationReport;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +39,7 @@ class GeneratorEngineIntegrationTest {
         config.setBasePackage("com.example.api");
         OutputConfig output = new OutputConfig();
         output.setDirectory(outputDir.toString());
+        output.setLayout(LayoutMode.MULTI_MODULE);
         config.setOutput(output);
         config.withOutputDirectory(outputDir);
 

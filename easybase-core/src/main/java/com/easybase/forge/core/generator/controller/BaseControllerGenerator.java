@@ -57,6 +57,8 @@ public class BaseControllerGenerator {
                         .addStatement("this.delegate = delegate")
                         .build());
 
+        addGeneratedJavadoc(classBuilder, config);
+
         for (ApiEndpoint endpoint : resource.endpoints()) {
             classBuilder.addMethod(buildEndpointMethod(endpoint, typeResolver, delegateType, config));
         }
@@ -128,6 +130,10 @@ public class BaseControllerGenerator {
         String argList = String.join(", ", delegateArgs);
         String delegateCall = "delegate." + endpoint.operationId() + "(" + argList + ")";
 
+        if (config.getGenerate().isAddGeneratedAnnotation()) {
+            mb.addJavadoc("<pre>$L</pre>\n", buildCurlSnippet(endpoint));
+        }
+
         boolean isVoid = returnType.equals(TypeName.VOID);
 
         if (isVoid) {
@@ -137,6 +143,28 @@ public class BaseControllerGenerator {
         }
 
         return mb.build();
+    }
+
+    private static void addGeneratedJavadoc(TypeSpec.Builder classBuilder, GeneratorConfig config) {
+        if (!config.getGenerate().isAddGeneratedAnnotation()) return;
+        StringBuilder doc = new StringBuilder();
+        String author = config.getGenerate().getAuthor();
+        if (author != null && !author.isBlank()) {
+            doc.append("@author ").append(author).append("\n");
+        }
+        doc.append("@generated\n");
+        classBuilder.addJavadoc(doc.toString());
+    }
+
+    private static String buildCurlSnippet(ApiEndpoint endpoint) {
+        StringBuilder sb = new StringBuilder("curl -X ")
+                .append(endpoint.httpMethod().name())
+                .append(" http://localhost:8080")
+                .append(endpoint.path());
+        if (endpoint.requestBody() != null) {
+            sb.append(" \\\n  -H 'Content-Type: application/json' \\\n  -d '{}'");
+        }
+        return sb.toString();
     }
 
     private TypeName resolveReturnType(ApiEndpoint endpoint, TypeNameResolver typeResolver,
