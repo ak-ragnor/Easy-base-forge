@@ -50,11 +50,16 @@ public class BaseControllerGenerator {
 
         TypeSpec.Builder classBuilder = TypeSpec.classBuilder(baseName)
                 .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-                .addField(FieldSpec.builder(delegateType, "delegate", Modifier.PROTECTED, Modifier.FINAL).build())
+                .addField(FieldSpec.builder(delegateType, "delegate", Modifier.PRIVATE, Modifier.FINAL).build())
                 .addMethod(MethodSpec.constructorBuilder()
                         .addModifiers(Modifier.PROTECTED)
                         .addParameter(delegateType, "delegate")
                         .addStatement("this.delegate = delegate")
+                        .build())
+                .addMethod(MethodSpec.methodBuilder("getDelegate")
+                        .addModifiers(Modifier.PROTECTED)
+                        .returns(delegateType)
+                        .addStatement("return delegate")
                         .build());
 
         addGeneratedJavadoc(classBuilder, config);
