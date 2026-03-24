@@ -1,12 +1,11 @@
 package com.easybase.forge.core.generator;
 
-import com.squareup.javapoet.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.UUID;
+
+import com.squareup.javapoet.*;
 
 /**
  * Converts a Java type string (as produced by {@link com.easybase.forge.core.parser.SchemaResolver})
@@ -16,82 +15,76 @@ import java.util.UUID;
  */
 public class TypeNameResolver {
 
-    private final String dtoPkg;
+	private final String dtoPkg;
 
-    public TypeNameResolver(String dtoPkg) {
-        this.dtoPkg = dtoPkg;
-    }
+	public TypeNameResolver(String dtoPkg) {
+		this.dtoPkg = dtoPkg;
+	}
 
-    public TypeName resolve(String javaType) {
-        if (javaType == null || javaType.isBlank()) {
-            return TypeName.VOID;
-        }
+	public TypeName resolve(String javaType) {
+		if (javaType == null || javaType.isBlank()) {
+			return TypeName.VOID;
+		}
 
-        // List<X>
-        if (javaType.startsWith("List<") && javaType.endsWith(">")) {
-            String inner = javaType.substring(5, javaType.length() - 1);
-            return ParameterizedTypeName.get(
-                    ClassName.get("java.util", "List"),
-                    resolve(inner));
-        }
+		if (javaType.startsWith("List<") && javaType.endsWith(">")) {
+			String inner = javaType.substring(5, javaType.length() - 1);
+			return ParameterizedTypeName.get(ClassName.get("java.util", "List"), resolve(inner));
+		}
 
-        return switch (javaType) {
-            case "void", "Void"      -> TypeName.VOID.box();
-            case "String"            -> ClassName.get(String.class);
-            case "Integer"           -> ClassName.get(Integer.class);
-            case "Long"              -> ClassName.get(Long.class);
-            case "Boolean"           -> ClassName.get(Boolean.class);
-            case "Float"             -> ClassName.get(Float.class);
-            case "BigDecimal"        -> ClassName.get(BigDecimal.class);
-            case "LocalDate"         -> ClassName.get(LocalDate.class);
-            case "OffsetDateTime"    -> ClassName.get(OffsetDateTime.class);
-            case "UUID"              -> ClassName.get(UUID.class);
-            case "Object"            -> ClassName.get(Object.class);
-            case "byte[]"            -> ArrayTypeName.of(TypeName.BYTE);
-            default                  -> ClassName.get(dtoPkg, javaType);
-        };
-    }
+		return switch (javaType) {
+			case "void", "Void" -> TypeName.VOID.box();
+			case "String" -> ClassName.get(String.class);
+			case "Integer" -> ClassName.get(Integer.class);
+			case "Long" -> ClassName.get(Long.class);
+			case "Boolean" -> ClassName.get(Boolean.class);
+			case "Float" -> ClassName.get(Float.class);
+			case "BigDecimal" -> ClassName.get(BigDecimal.class);
+			case "LocalDate" -> ClassName.get(LocalDate.class);
+			case "OffsetDateTime" -> ClassName.get(OffsetDateTime.class);
+			case "UUID" -> ClassName.get(UUID.class);
+			case "Object" -> ClassName.get(Object.class);
+			case "byte[]" -> ArrayTypeName.of(TypeName.BYTE);
+			default -> ClassName.get(dtoPkg, javaType);
+		};
+	}
 
-    /** Wraps a type in {@code ResponseEntity<T>}. Void becomes {@code ResponseEntity<Void>}. */
-    public TypeName responseEntity(String javaType) {
-        TypeName body = (javaType == null || javaType.equals("Void") || javaType.isBlank())
-                ? ClassName.get(Void.class)
-                : resolve(javaType);
-        return ParameterizedTypeName.get(
-                ClassName.get("org.springframework.http", "ResponseEntity"),
-                body);
-    }
+	public TypeName responseEntity(String javaType) {
+		TypeName body = (javaType == null || javaType.equals("Void") || javaType.isBlank())
+				? ClassName.get(Void.class)
+				: resolve(javaType);
 
-    /**
-     * Converts a Java type string to {@code Page<T>} for paginated endpoints.
-     *
-     * <p>If the type is already a {@code List<X>}, the element type {@code X} is used directly.
-     * Otherwise the full type is used as-is (e.g. {@code Page<PetDTO>}).
-     */
-    public TypeName page(String javaType) {
-        String elementType = javaType;
-        if (javaType != null && javaType.startsWith("List<") && javaType.endsWith(">")) {
-            elementType = javaType.substring(5, javaType.length() - 1);
-        }
-        TypeName element = (elementType == null || elementType.isBlank() || elementType.equals("Void"))
-                ? ClassName.get(Object.class)
-                : resolve(elementType);
-        return ParameterizedTypeName.get(
-                ClassName.get("org.springframework.data.domain", "Page"),
-                element);
-    }
+		return ParameterizedTypeName.get(ClassName.get("org.springframework.http", "ResponseEntity"), body);
+	}
 
-    /**
-     * Wraps a type in {@code ResponseEntity<Page<T>>} for paginated endpoints.
-     */
-    public TypeName responseEntityPage(String javaType) {
-        return ParameterizedTypeName.get(
-                ClassName.get("org.springframework.http", "ResponseEntity"),
-                page(javaType));
-    }
+	/**
+	 * Converts a Java type string to {@code Page<T>} for paginated endpoints.
+	 *
+	 * <p>If the type is already a {@code List<X>}, the element type {@code X} is used directly.
+	 * Otherwise the full type is used as-is (e.g. {@code Page<PetDTO>}).
+	 */
+	public TypeName page(String javaType) {
+		String elementType = javaType;
 
-    /** The {@code Pageable} type from Spring Data. */
-    public static TypeName pageableType() {
-        return ClassName.get("org.springframework.data.domain", "Pageable");
-    }
+		if (javaType != null && javaType.startsWith("List<") && javaType.endsWith(">")) {
+			elementType = javaType.substring(5, javaType.length() - 1);
+		}
+
+		TypeName element = (elementType == null || elementType.isBlank() || elementType.equals("Void"))
+				? ClassName.get(Object.class)
+				: resolve(elementType);
+
+		return ParameterizedTypeName.get(ClassName.get("org.springframework.data.domain", "Page"), element);
+	}
+
+	/**
+	 * Wraps a type in {@code ResponseEntity<Page<T>>} for paginated endpoints.
+	 */
+	public TypeName responseEntityPage(String javaType) {
+		return ParameterizedTypeName.get(ClassName.get("org.springframework.http", "ResponseEntity"), page(javaType));
+	}
+
+	/** The {@code Pageable} type from Spring Data. */
+	public static TypeName pageableType() {
+		return ClassName.get("org.springframework.data.domain", "Pageable");
+	}
 }

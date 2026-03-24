@@ -12,24 +12,23 @@ package com.easybase.forge.core.config;
  */
 public class FlatLayoutStrategy implements LayoutStrategy {
 
-    private final String basePackage;
+	private final String basePackage;
 
-    public FlatLayoutStrategy(String basePackage) {
-        this.basePackage = basePackage;
-    }
+	public FlatLayoutStrategy(String basePackage) {
+		this.basePackage = basePackage;
+	}
 
-    @Override
-    public String resolvePackage(String pattern, String resourceName) {
-        return pattern
-                .replace("{basePackage}", basePackage)
-                .replace("{Resource}", "")
-                .replace("{resource}", "")
-                .replaceAll("\\.{2,}", ".")   // collapse consecutive dots: a..b → a.b
-                .replaceAll("\\.$", "");      // strip trailing dot
-    }
+	@Override
+	public String resolvePackage(String pattern, String resourceName) {
+		return pattern.replace("{basePackage}", basePackage)
+				.replace("{Resource}", "")
+				.replace("{resource}", "")
+				.replaceAll("\\.{2,}", ".")
+				.replaceAll("\\.$", "");
+	}
 
-    @Override
-    public LayoutMode mode() {
-        return LayoutMode.FLAT;
-    }
+	@Override
+	public LayoutMode mode() {
+		return LayoutMode.FLAT;
+	}
 }

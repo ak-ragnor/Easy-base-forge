@@ -8,28 +8,30 @@ package com.easybase.forge.core.config;
  */
 public class MultiModuleLayoutStrategy implements LayoutStrategy {
 
-    private final String basePackage;
+	private final String basePackage;
 
-    public MultiModuleLayoutStrategy(String basePackage) {
-        this.basePackage = basePackage;
-    }
+	public MultiModuleLayoutStrategy(String basePackage) {
+		this.basePackage = basePackage;
+	}
 
-    @Override
-    public String resolvePackage(String pattern, String resourceName) {
-        String pascalCase = toPascalCase(resourceName);
-        return pattern
-                .replace("{basePackage}", basePackage)
-                .replace("{Resource}", pascalCase)
-                .replace("{resource}", resourceName.toLowerCase());
-    }
+	@Override
+	public String resolvePackage(String pattern, String resourceName) {
+		final String pascalCase = toPascalCase(resourceName);
 
-    @Override
-    public LayoutMode mode() {
-        return LayoutMode.MULTI_MODULE;
-    }
+		return pattern.replace("{basePackage}", basePackage)
+				.replace("{Resource}", pascalCase)
+				.replace("{resource}", resourceName.toLowerCase());
+	}
 
-    private static String toPascalCase(String name) {
-        if (name == null || name.isEmpty()) return name;
-        return Character.toUpperCase(name.charAt(0)) + name.substring(1).toLowerCase();
-    }
+	@Override
+	public LayoutMode mode() {
+		return LayoutMode.MULTI_MODULE;
+	}
+
+	private static String toPascalCase(String name) {
+		if (name == null || name.isEmpty()) {
+			return name;
+		}
+		return Character.toUpperCase(name.charAt(0)) + name.substring(1).toLowerCase();
+	}
 }

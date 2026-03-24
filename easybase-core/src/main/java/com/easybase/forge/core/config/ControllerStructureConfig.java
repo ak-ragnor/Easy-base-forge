@@ -9,25 +9,25 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class ControllerStructureConfig {
 
-    @JsonProperty("package")
-    private String pkg = "{basePackage}.{resource}.controller";
+	@JsonProperty("package")
+	private String pkg = "{basePackage}.{resource}.controller";
 
-    @JsonProperty("basePackage")
-    private String basePkg = "{basePackage}.{resource}.controller.base";
+	@JsonProperty("basePackage")
+	private String basePkg = "{basePackage}.{resource}.controller.base";
 
-    public String getPkg() {
-        return pkg;
-    }
+	public String getPkg() {
+		return pkg;
+	}
 
-    public void setPkg(String pkg) {
-        this.pkg = pkg;
-    }
+	public void setPkg(String pkg) {
+		this.pkg = pkg;
+	}
 
-    public String getBasePkg() {
-        return basePkg;
-    }
+	public String getBasePkg() {
+		return basePkg;
+	}
 
-    public void setBasePkg(String basePkg) {
-        this.basePkg = basePkg;
-    }
+	public void setBasePkg(String basePkg) {
+		this.basePkg = basePkg;
+	}
 }

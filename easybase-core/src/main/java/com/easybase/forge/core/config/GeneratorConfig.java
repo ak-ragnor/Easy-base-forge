@@ -28,77 +28,80 @@ import java.nio.file.Path;
  */
 public class GeneratorConfig {
 
-    private String basePackage;
-    private OutputConfig output = new OutputConfig();
-    private StructureConfig structure = new StructureConfig();
-    private GenerateOptions generate = new GenerateOptions();
+	private String basePackage;
+	private OutputConfig output = new OutputConfig();
+	private StructureConfig structure = new StructureConfig();
+	private GenerateOptions generate = new GenerateOptions();
 
-    /** Resolved output directory (may be set programmatically by Maven/CLI). */
-    private Path resolvedOutputDirectory;
+	private Path resolvedOutputDirectory;
 
-    public String getBasePackage() {
-        return basePackage;
-    }
+	public String getBasePackage() {
+		return basePackage;
+	}
 
-    public void setBasePackage(String basePackage) {
-        this.basePackage = basePackage;
-    }
+	public void setBasePackage(String basePackage) {
+		this.basePackage = basePackage;
+	}
 
-    public OutputConfig getOutput() {
-        return output;
-    }
+	public OutputConfig getOutput() {
+		return output;
+	}
 
-    public void setOutput(OutputConfig output) {
-        this.output = output;
-    }
+	public void setOutput(OutputConfig output) {
+		this.output = output;
+	}
 
-    public StructureConfig getStructure() {
-        return structure;
-    }
+	public StructureConfig getStructure() {
+		return structure;
+	}
 
-    public void setStructure(StructureConfig structure) {
-        this.structure = structure;
-    }
+	public void setStructure(StructureConfig structure) {
+		this.structure = structure;
+	}
 
-    public GenerateOptions getGenerate() {
-        return generate;
-    }
+	public GenerateOptions getGenerate() {
+		return generate;
+	}
 
-    public void setGenerate(GenerateOptions generate) {
-        this.generate = generate;
-    }
+	public void setGenerate(GenerateOptions generate) {
+		this.generate = generate;
+	}
 
-    public Path getResolvedOutputDirectory() {
-        return resolvedOutputDirectory;
-    }
+	public Path getResolvedOutputDirectory() {
+		return resolvedOutputDirectory;
+	}
 
-    /** Override the output directory (used by Maven Mojo or CLI). */
-    public GeneratorConfig withOutputDirectory(Path outputDirectory) {
-        this.resolvedOutputDirectory = outputDirectory;
-        return this;
-    }
+	public GeneratorConfig withOutputDirectory(Path outputDirectory) {
+		this.resolvedOutputDirectory = outputDirectory;
+		return this;
+	}
 
-    /**
-     * Returns the {@link LayoutStrategy} for this configuration.
-     *
-     * <p>Defaults to {@link FlatLayoutStrategy} when no {@code output.layout} is set.
-     */
-    public LayoutStrategy getLayoutStrategy() {
-        LayoutMode mode = (output != null && output.getLayout() != null)
-                ? output.getLayout()
-                : LayoutMode.FLAT;
-        return mode == LayoutMode.FLAT
-                ? new FlatLayoutStrategy(basePackage)
-                : new MultiModuleLayoutStrategy(basePackage);
-    }
+	/**
+	 * Returns the {@link LayoutStrategy} for this configuration.
+	 *
+	 * <p>Defaults to {@link FlatLayoutStrategy} when no {@code output.layout} is set.
+	 */
+	public LayoutStrategy getLayoutStrategy() {
+		final LayoutMode mode;
+		if (output != null && output.getLayout() != null) {
+			mode = output.getLayout();
+		} else {
+			mode = LayoutMode.FLAT;
+		}
+		if (mode == LayoutMode.FLAT) {
+			return new FlatLayoutStrategy(basePackage);
+		} else {
+			return new MultiModuleLayoutStrategy(basePackage);
+		}
+	}
 
-    /**
-     * Resolve a package pattern by substituting {@code {basePackage}}, {@code {resource}},
-     * and {@code {Resource}} placeholders.
-     *
-     * <p>Delegates to {@link #getLayoutStrategy()}.
-     */
-    public String resolvePackage(String pattern, String resourceName) {
-        return getLayoutStrategy().resolvePackage(pattern, resourceName);
-    }
+	/**
+	 * Resolve a package pattern by substituting {@code {basePackage}}, {@code {resource}},
+	 * and {@code {Resource}} placeholders.
+	 *
+	 * <p>Delegates to {@link #getLayoutStrategy()}.
+	 */
+	public String resolvePackage(String pattern, String resourceName) {
+		return getLayoutStrategy().resolvePackage(pattern, resourceName);
+	}
 }

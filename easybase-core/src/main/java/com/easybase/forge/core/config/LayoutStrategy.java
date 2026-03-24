@@ -15,16 +15,16 @@ package com.easybase.forge.core.config;
  */
 public interface LayoutStrategy {
 
-    /**
-     * Resolves a package pattern by substituting {@code {basePackage}}, {@code {resource}},
-     * and {@code {Resource}} placeholders.
-     *
-     * @param pattern      package pattern string from {@code easybase-config.yaml}
-     * @param resourceName the resource name (e.g. {@code "pets"})
-     * @return fully-qualified package name
-     */
-    String resolvePackage(String pattern, String resourceName);
+	/**
+	 * Resolves a package pattern by substituting {@code {basePackage}}, {@code {resource}},
+	 * and {@code {Resource}} placeholders.
+	 *
+	 * @param pattern      package pattern string from {@code easybase-config.yaml}
+	 * @param resourceName the resource name (e.g. {@code "pets"})
+	 * @return fully-qualified package name
+	 */
+	String resolvePackage(String pattern, String resourceName);
 
-    /** The {@link LayoutMode} this strategy implements. */
-    LayoutMode mode();
+	/** The {@link LayoutMode} this strategy implements. */
+	LayoutMode mode();
 }

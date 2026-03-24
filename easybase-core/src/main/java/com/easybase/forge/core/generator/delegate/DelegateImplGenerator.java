@@ -1,5 +1,11 @@
 package com.easybase.forge.core.generator.delegate;
 
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.lang.model.element.Modifier;
+
 import com.easybase.forge.core.config.GeneratorConfig;
 import com.easybase.forge.core.config.PaginationMode;
 import com.easybase.forge.core.config.ResponseEntityMode;
@@ -8,11 +14,6 @@ import com.easybase.forge.core.generator.GeneratorUtils;
 import com.easybase.forge.core.generator.TypeNameResolver;
 import com.easybase.forge.core.model.*;
 import com.squareup.javapoet.*;
-
-import javax.lang.model.element.Modifier;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Generates the delegate implementation pair for a resource:
@@ -30,139 +31,143 @@ import java.util.List;
  */
 public class DelegateImplGenerator {
 
-    private static final ClassName COMPONENT =
-            ClassName.get("org.springframework.stereotype", "Component");
+	private static final ClassName COMPONENT = ClassName.get("org.springframework.stereotype", "Component");
 
-    public List<GeneratedArtifact> generate(ApiResource resource, GeneratorConfig config) {
-        String delegatePkg = config.resolvePackage(
-                config.getStructure().getDelegate().getPkg(),
-                resource.packageSuffix());
-        String dtoPkg = config.resolvePackage(
-                config.getStructure().getDto().getPkg(),
-                resource.packageSuffix());
-        TypeNameResolver typeResolver = new TypeNameResolver(dtoPkg);
+	public List<GeneratedArtifact> generate(ApiResource resource, GeneratorConfig config) {
+		String delegatePkg =
+				config.resolvePackage(config.getStructure().getDelegate().getPkg(), resource.packageSuffix());
+		String dtoPkg = config.resolvePackage(config.getStructure().getDto().getPkg(), resource.packageSuffix());
+		TypeNameResolver typeResolver = new TypeNameResolver(dtoPkg);
 
-        String implPkg = delegatePkg + ".impl";
-        String basePkg  = implPkg + ".base";
+		String implPkg = delegatePkg + ".impl";
+		String basePkg = implPkg + ".base";
 
-        String delegateName = resource.name() + "ApiDelegate";
-        String baseName     = resource.name() + "ApiDelegateImplBase";
-        String implName     = resource.name() + "ApiDelegateImpl";
+		String delegateName = resource.name() + "ApiDelegate";
+		String baseName = resource.name() + "ApiDelegateImplBase";
+		String implName = resource.name() + "ApiDelegateImpl";
 
-        ClassName delegateType = ClassName.get(delegatePkg, delegateName);
-        ClassName baseType     = ClassName.get(basePkg, baseName);
+		ClassName delegateType = ClassName.get(delegatePkg, delegateName);
+		ClassName baseType = ClassName.get(basePkg, baseName);
 
-        // ── Base: abstract class with all stubs (always overwritten) ─────────
-        TypeSpec.Builder baseBuilder = TypeSpec.classBuilder(baseName)
-                .addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
-                .addSuperinterface(delegateType);
+		// ── Base: abstract class with all stubs (always overwritten) ─────────
+		TypeSpec.Builder baseBuilder = TypeSpec.classBuilder(baseName)
+				.addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
+				.addSuperinterface(delegateType);
 
-        for (ApiEndpoint endpoint : resource.endpoints()) {
-            baseBuilder.addMethod(buildStubMethod(endpoint, typeResolver, config));
-        }
+		for (ApiEndpoint endpoint : resource.endpoints()) {
+			baseBuilder.addMethod(buildStubMethod(endpoint, typeResolver, config));
+		}
 
-        JavaFile baseFile = JavaFile.builder(basePkg, baseBuilder.build())
-                .skipJavaLangImports(true)
-                .indent("    ")
-                .build();
+		JavaFile baseFile = JavaFile.builder(basePkg, baseBuilder.build())
+				.skipJavaLangImports(true)
+				.indent("    ")
+				.build();
 
-        Path basePath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), basePkg)
-                .resolve(baseName + ".java");
+		Path basePath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), basePkg)
+				.resolve(baseName + ".java");
 
-        // ── Impl: empty @Component class extending the base (create-once) ────
-        TypeSpec.Builder implBuilder = TypeSpec.classBuilder(implName)
-                .addModifiers(Modifier.PUBLIC)
-                .addAnnotation(COMPONENT)
-                .superclass(baseType);
+		// ── Impl: empty @Component class extending the base (create-once) ────
+		TypeSpec.Builder implBuilder = TypeSpec.classBuilder(implName)
+				.addModifiers(Modifier.PUBLIC)
+				.addAnnotation(COMPONENT)
+				.superclass(baseType);
 
-        JavaFile implFile = JavaFile.builder(implPkg, implBuilder.build())
-                .skipJavaLangImports(true)
-                .indent("    ")
-                .build();
+		JavaFile implFile = JavaFile.builder(implPkg, implBuilder.build())
+				.skipJavaLangImports(true)
+				.indent("    ")
+				.build();
 
-        Path implPath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), implPkg)
-                .resolve(implName + ".java");
+		Path implPath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), implPkg)
+				.resolve(implName + ".java");
 
-        List<GeneratedArtifact> artifacts = new ArrayList<>();
-        artifacts.add(new GeneratedArtifact(basePath, ArtifactType.DELEGATE_IMPL_BASE, baseFile.toString()));
-        artifacts.add(new GeneratedArtifact(implPath, ArtifactType.DELEGATE_IMPL, implFile.toString()));
-        return artifacts;
-    }
+		List<GeneratedArtifact> artifacts = new ArrayList<>();
 
-    private MethodSpec buildStubMethod(ApiEndpoint endpoint, TypeNameResolver typeResolver,
-                                       GeneratorConfig config) {
-        ResponseEntityMode mode = config.getGenerate().getResponseEntityWrapping();
-        PaginationMode paginationMode = config.getGenerate().getPagination();
-        boolean applyPagination = endpoint.paginated() && paginationMode == PaginationMode.SPRING_DATA;
-        TypeName returnType = resolveReturnType(endpoint, typeResolver, mode, applyPagination);
+		artifacts.add(new GeneratedArtifact(basePath, ArtifactType.DELEGATE_IMPL_BASE, baseFile.toString()));
+		artifacts.add(new GeneratedArtifact(implPath, ArtifactType.DELEGATE_IMPL, implFile.toString()));
 
-        MethodSpec.Builder mb = MethodSpec.methodBuilder(endpoint.operationId())
-                .addAnnotation(Override.class)
-                .addModifiers(Modifier.PUBLIC)
-                .returns(returnType);
+		return artifacts;
+	}
 
-        // Path + query parameters
-        for (ApiParameter param : endpoint.parameters()) {
-            if (param.in() == ParameterLocation.PATH || param.in() == ParameterLocation.QUERY) {
-                mb.addParameter(
-                        typeResolver.resolve(param.schema().javaType()),
-                        sanitizeName(param.name()));
-            }
-        }
+	private MethodSpec buildStubMethod(ApiEndpoint endpoint, TypeNameResolver typeResolver, GeneratorConfig config) {
+		ResponseEntityMode mode = config.getGenerate().getResponseEntityWrapping();
+		PaginationMode paginationMode = config.getGenerate().getPagination();
 
-        // Request body
-        if (endpoint.requestBody() != null) {
-            String bodyType = endpoint.requestBody().schema().javaType();
-            mb.addParameter(typeResolver.resolve(bodyType), deriveBodyParamName(bodyType));
-        }
+		boolean applyPagination = endpoint.paginated() && paginationMode == PaginationMode.SPRING_DATA;
 
-        // Spring Data pageable parameter
-        if (applyPagination) {
-            mb.addParameter(TypeNameResolver.pageableType(), "pageable");
-        }
+		TypeName returnType = resolveReturnType(endpoint, typeResolver, mode, applyPagination);
 
-        mb.addStatement("throw new $T($S)", UnsupportedOperationException.class, "Not implemented");
+		MethodSpec.Builder mb = MethodSpec.methodBuilder(endpoint.operationId())
+				.addAnnotation(Override.class)
+				.addModifiers(Modifier.PUBLIC)
+				.returns(returnType);
 
-        return mb.build();
-    }
+		// Path + query parameters
+		for (ApiParameter param : endpoint.parameters()) {
+			if (param.in() == ParameterLocation.PATH || param.in() == ParameterLocation.QUERY) {
+				mb.addParameter(typeResolver.resolve(param.schema().javaType()), sanitizeName(param.name()));
+			}
+		}
 
-    private TypeName resolveReturnType(ApiEndpoint endpoint, TypeNameResolver typeResolver,
-                                       ResponseEntityMode mode, boolean paginated) {
-        ApiResponse primary = endpoint.primaryResponse();
-        String bodyType = (primary != null && primary.schema() != null)
-                ? primary.schema().javaType() : null;
-        boolean isVoid = bodyType == null || bodyType.equals("Void");
+		// Request body
+		if (endpoint.requestBody() != null) {
+			String bodyType = endpoint.requestBody().schema().javaType();
+			mb.addParameter(typeResolver.resolve(bodyType), deriveBodyParamName(bodyType));
+		}
 
-        if (paginated && !isVoid) {
-            return switch (mode) {
-                case ALWAYS    -> typeResolver.responseEntityPage(bodyType);
-                case NEVER     -> typeResolver.page(bodyType);
-                case VOID_ONLY -> typeResolver.page(bodyType);
-            };
-        }
+		// Spring Data pageable parameter
+		if (applyPagination) {
+			mb.addParameter(TypeNameResolver.pageableType(), "pageable");
+		}
 
-        return switch (mode) {
-            case ALWAYS    -> typeResolver.responseEntity(bodyType);
-            case NEVER     -> isVoid ? TypeName.VOID : typeResolver.resolve(bodyType);
-            case VOID_ONLY -> isVoid ? typeResolver.responseEntity(null) : typeResolver.resolve(bodyType);
-        };
-    }
+		mb.addStatement("throw new $T($S)", UnsupportedOperationException.class, "Not implemented");
 
-    private static String sanitizeName(String name) {
-        String[] parts = name.split("[\\-\\.]");
-        if (parts.length == 1) return name;
-        StringBuilder sb = new StringBuilder(parts[0]);
-        for (int i = 1; i < parts.length; i++) {
-            if (!parts[i].isEmpty()) {
-                sb.append(Character.toUpperCase(parts[i].charAt(0)));
-                sb.append(parts[i].substring(1));
-            }
-        }
-        return sb.toString();
-    }
+		return mb.build();
+	}
 
-    private static String deriveBodyParamName(String javaType) {
-        if (javaType == null || javaType.isEmpty()) return "body";
-        return Character.toLowerCase(javaType.charAt(0)) + javaType.substring(1);
-    }
+	private TypeName resolveReturnType(
+			ApiEndpoint endpoint, TypeNameResolver typeResolver, ResponseEntityMode mode, boolean paginated) {
+		ApiResponse primary = endpoint.primaryResponse();
+
+		String bodyType =
+				(primary != null && primary.schema() != null) ? primary.schema().javaType() : null;
+
+		boolean isVoid = bodyType == null || bodyType.equals("Void");
+
+		if (paginated && !isVoid) {
+			return switch (mode) {
+				case ALWAYS -> typeResolver.responseEntityPage(bodyType);
+				case NEVER, VOID_ONLY -> typeResolver.page(bodyType);
+			};
+		}
+
+		return switch (mode) {
+			case ALWAYS -> typeResolver.responseEntity(bodyType);
+			case NEVER -> isVoid ? TypeName.VOID : typeResolver.resolve(bodyType);
+			case VOID_ONLY -> isVoid ? typeResolver.responseEntity(null) : typeResolver.resolve(bodyType);
+		};
+	}
+
+	private static String sanitizeName(String name) {
+		String[] parts = name.split("[\\-\\.]");
+
+		if (parts.length == 1) {
+			return name;
+		}
+
+		StringBuilder sb = new StringBuilder(parts[0]);
+
+		for (int i = 1; i < parts.length; i++) {
+			if (!parts[i].isEmpty()) {
+				sb.append(Character.toUpperCase(parts[i].charAt(0)));
+				sb.append(parts[i].substring(1));
+			}
+		}
+
+		return sb.toString();
+	}
+
+	private static String deriveBodyParamName(String javaType) {
+		if (javaType == null || javaType.isEmpty()) return "body";
+		return Character.toLowerCase(javaType.charAt(0)) + javaType.substring(1);
+	}
 }
