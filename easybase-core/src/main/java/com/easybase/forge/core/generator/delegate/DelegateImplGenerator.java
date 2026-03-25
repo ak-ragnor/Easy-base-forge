@@ -8,6 +8,7 @@ import javax.lang.model.element.Modifier;
 
 import com.easybase.forge.core.config.GeneratorConfig;
 import com.easybase.forge.core.config.PaginationMode;
+import com.easybase.forge.core.generator.ArtifactGenerator;
 import com.easybase.forge.core.generator.GeneratedArtifact;
 import com.easybase.forge.core.generator.GeneratorUtils;
 import com.easybase.forge.core.generator.TypeNameResolver;
@@ -28,11 +29,16 @@ import com.squareup.javapoet.*;
  *
  * <p>Only produced when {@code generate.delegateImpl: true} is set in the config.
  */
-public class DelegateImplGenerator {
+public class DelegateImplGenerator implements ArtifactGenerator {
 
 	private static final ClassName COMPONENT = ClassName.get("org.springframework.stereotype", "Component");
 
+	@Override
 	public List<GeneratedArtifact> generate(ApiResource resource, GeneratorConfig config) {
+		if (!config.getGenerate().isDelegateImpl()) {
+			return List.of();
+		}
+
 		String delegatePkg =
 				config.resolvePackage(config.getStructure().getDelegate().getPkg(), resource.packageSuffix());
 		String dtoPkg = config.resolvePackage(config.getStructure().getDto().getPkg(), resource.packageSuffix());

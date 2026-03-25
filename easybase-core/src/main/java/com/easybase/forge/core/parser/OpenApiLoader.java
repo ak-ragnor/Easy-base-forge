@@ -2,6 +2,7 @@ package com.easybase.forge.core.parser;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.logging.Logger;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.parser.OpenAPIV3Parser;
@@ -13,6 +14,8 @@ import io.swagger.v3.parser.core.models.SwaggerParseResult;
  * Returns a fully-resolved {@link OpenAPI} model with all {@code $ref} chains followed.
  */
 public class OpenApiLoader {
+
+	private static final Logger LOG = Logger.getLogger(OpenApiLoader.class.getName());
 
 	public OpenAPI load(Path specFile) {
 		ParseOptions options = new ParseOptions();
@@ -30,7 +33,7 @@ public class OpenApiLoader {
 		}
 
 		if (messages != null && !messages.isEmpty()) {
-			messages.forEach(msg -> System.err.println("[WARN] OpenAPI: " + msg));
+			messages.forEach(msg -> LOG.warning("[WARN] OpenAPI: " + msg));
 		}
 
 		return result.getOpenAPI();

@@ -9,6 +9,7 @@ import javax.lang.model.element.Modifier;
 import com.easybase.forge.core.config.GeneratorConfig;
 import com.easybase.forge.core.config.PaginationMode;
 import com.easybase.forge.core.config.ResponseWrapperConfig;
+import com.easybase.forge.core.generator.ArtifactGenerator;
 import com.easybase.forge.core.generator.GeneratedArtifact;
 import com.easybase.forge.core.generator.GeneratorUtils;
 import com.easybase.forge.core.generator.TypeNameResolver;
@@ -21,7 +22,7 @@ import com.squareup.javapoet.*;
  * <p>This class is always overwritten on regeneration. It contains one method
  * per endpoint, each delegating to the injected {@code {Resource}ApiDelegate}.
  */
-public class BaseControllerGenerator {
+public class BaseControllerGenerator implements ArtifactGenerator {
 
 	private static final ClassName GET_MAPPING = ClassName.get("org.springframework.web.bind.annotation", "GetMapping");
 	private static final ClassName POST_MAPPING =
@@ -42,7 +43,8 @@ public class BaseControllerGenerator {
 	private static final ClassName HTTP_STATUS = ClassName.get("org.springframework.http", "HttpStatus");
 	private static final ClassName VALID = ClassName.get("jakarta.validation", "Valid");
 
-	public GeneratedArtifact generate(ApiResource resource, GeneratorConfig config) {
+	@Override
+	public List<GeneratedArtifact> generate(ApiResource resource, GeneratorConfig config) {
 		String basePkg =
 				config.resolvePackage(config.getStructure().getController().getBasePkg(), resource.packageSuffix());
 		String delegatePkg =
@@ -84,7 +86,7 @@ public class BaseControllerGenerator {
 		Path outputPath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), basePkg)
 				.resolve(baseName + ".java");
 
-		return new GeneratedArtifact(outputPath, ArtifactType.BASE_CONTROLLER, javaFile.toString());
+		return List.of(new GeneratedArtifact(outputPath, ArtifactType.BASE_CONTROLLER, javaFile.toString()));
 	}
 
 	private MethodSpec buildEndpointMethod(
@@ -146,7 +148,6 @@ public class BaseControllerGenerator {
 			}
 		}
 
-		// Request body
 		if (endpoint.requestBody() != null) {
 			String bodyType = endpoint.requestBody().schema().javaType();
 			String bodyName = GeneratorUtils.deriveBodyParamName(bodyType);
@@ -161,7 +162,6 @@ public class BaseControllerGenerator {
 			delegateArgs.add(bodyName);
 		}
 
-		// Spring Data Pageable parameter (appended last)
 		if (applyPagination) {
 			mb.addParameter(TypeNameResolver.pageableType(), "pageable");
 			delegateArgs.add("pageable");

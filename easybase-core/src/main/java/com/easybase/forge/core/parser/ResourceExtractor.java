@@ -102,6 +102,7 @@ public class ResourceExtractor {
 					List<ValidationConstraint> constraints =
 							validationMapper.map(p.getSchema(), Boolean.TRUE.equals(p.getRequired()));
 					ParameterLocation loc = ParameterLocation.valueOf(p.getIn().toUpperCase());
+
 					return new ApiParameter(
 							p.getName(), loc, Boolean.TRUE.equals(p.getRequired()), schema, constraints);
 				})
@@ -140,19 +141,23 @@ public class ResourceExtractor {
 
 		apiResponses.forEach((code, response) -> {
 			int statusCode;
+
 			try {
 				statusCode = Integer.parseInt(code);
 			} catch (NumberFormatException e) {
 				return;
 			}
+
 			ApiSchema schema = null;
 			Content content = response.getContent();
+
 			if (content != null && !content.isEmpty()) {
 				MediaType mediaType = content.entrySet().iterator().next().getValue();
 				if (mediaType.getSchema() != null) {
 					schema = schemaResolver.resolve(mediaType.getSchema(), operationId + "Response");
 				}
 			}
+
 			result.put(statusCode, new ApiResponse(statusCode, response.getDescription(), schema));
 		});
 

@@ -2,6 +2,7 @@ package com.easybase.forge.core.engine;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.easybase.forge.core.config.GeneratorConfig;
 import com.easybase.forge.core.model.ApiResource;
@@ -18,6 +19,8 @@ import io.swagger.v3.oas.models.OpenAPI;
  * Top-level orchestrator: config → parse → plan → generate → write.
  */
 public class GeneratorEngine {
+
+	private static final Logger LOG = Logger.getLogger(GeneratorEngine.class.getName());
 
 	private final GeneratorConfig config;
 
@@ -74,9 +77,9 @@ public class GeneratorEngine {
 	}
 
 	private static void logReport(GenerationReport report) {
-		report.created().forEach(p -> System.out.println("[CREATED] " + p));
-		report.updated().forEach(p -> System.out.println("[UPDATED] " + p));
-		report.skipped().forEach(p -> System.out.println("[SKIPPED] " + p));
-		report.errors().forEach(e -> System.err.println("[ERROR]   " + e));
+		report.created().forEach(p -> LOG.info("[CREATED] " + p));
+		report.updated().forEach(p -> LOG.info("[UPDATED] " + p));
+		report.skipped().forEach(p -> LOG.fine("[SKIPPED] " + p));
+		report.errors().forEach(e -> LOG.warning("[ERROR]   " + e));
 	}
 }

@@ -1,10 +1,12 @@
 package com.easybase.forge.core.generator.controller;
 
 import java.nio.file.Path;
+import java.util.List;
 
 import javax.lang.model.element.Modifier;
 
 import com.easybase.forge.core.config.GeneratorConfig;
+import com.easybase.forge.core.generator.ArtifactGenerator;
 import com.easybase.forge.core.generator.GeneratedArtifact;
 import com.easybase.forge.core.generator.GeneratorUtils;
 import com.easybase.forge.core.model.ApiResource;
@@ -20,7 +22,7 @@ import com.squareup.javapoet.*;
  * <p>Optional annotations ({@code @CrossOrigin}, {@code @Slf4j}) are added when
  * the corresponding config options are set.
  */
-public class CustomControllerGenerator {
+public class CustomControllerGenerator implements ArtifactGenerator {
 
 	private static final ClassName REST_CONTROLLER =
 			ClassName.get("org.springframework.web.bind.annotation", "RestController");
@@ -28,7 +30,8 @@ public class CustomControllerGenerator {
 			ClassName.get("org.springframework.web.bind.annotation", "CrossOrigin");
 	private static final ClassName SLF4J = ClassName.get("lombok.extern.slf4j", "Slf4j");
 
-	public GeneratedArtifact generate(ApiResource resource, GeneratorConfig config) {
+	@Override
+	public List<GeneratedArtifact> generate(ApiResource resource, GeneratorConfig config) {
 		String controllerPkg =
 				config.resolvePackage(config.getStructure().getController().getPkg(), resource.packageSuffix());
 		String basePkg =
@@ -74,6 +77,6 @@ public class CustomControllerGenerator {
 		Path outputPath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), controllerPkg)
 				.resolve(controllerName + ".java");
 
-		return new GeneratedArtifact(outputPath, ArtifactType.CUSTOM_CONTROLLER, javaFile.toString());
+		return List.of(new GeneratedArtifact(outputPath, ArtifactType.CUSTOM_CONTROLLER, javaFile.toString()));
 	}
 }

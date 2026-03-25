@@ -137,14 +137,15 @@ public class TypeNameResolver {
 		ApiResponse primary = endpoint.primaryResponse();
 		String bodyType =
 				(primary != null && primary.schema() != null) ? primary.schema().javaType() : null;
+
 		boolean isVoid = bodyType == null || bodyType.equals("Void");
 
 		if (wrapper != null && wrapper.isEnabled()) {
-			if (applyPagination && !isVoid){
+			if (applyPagination && !isVoid) {
 				return customWrapperPage(wrapper.getPagedClass(), bodyType);
 			}
 
-			if (!isVoid){
+			if (!isVoid) {
 				return customWrapper(wrapper.getSingleClass(), bodyType);
 			}
 

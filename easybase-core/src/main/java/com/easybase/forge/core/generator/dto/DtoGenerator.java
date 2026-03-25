@@ -8,6 +8,7 @@ import javax.lang.model.element.Modifier;
 
 import com.easybase.forge.core.config.GeneratorConfig;
 import com.easybase.forge.core.generator.AnnotationBuilder;
+import com.easybase.forge.core.generator.ArtifactGenerator;
 import com.easybase.forge.core.generator.GeneratedArtifact;
 import com.easybase.forge.core.generator.GeneratorUtils;
 import com.easybase.forge.core.generator.TypeNameResolver;
@@ -17,7 +18,7 @@ import com.squareup.javapoet.*;
 /**
  * Generates one DTO class per {@link DtoSchema} in a resource.
  */
-public class DtoGenerator {
+public class DtoGenerator implements ArtifactGenerator {
 
 	private static final ClassName JSON_TYPE_INFO = ClassName.get("com.fasterxml.jackson.annotation", "JsonTypeInfo");
 	private static final ClassName JSON_SUB_TYPES = ClassName.get("com.fasterxml.jackson.annotation", "JsonSubTypes");
@@ -65,7 +66,6 @@ public class DtoGenerator {
 				fb.addAnnotation(NULLABLE);
 			}
 
-			// Validation annotations (before @JsonProperty for consistent ordering)
 			if (config.getGenerate().isBeanValidation()) {
 				for (var constraint : field.validations()) {
 					fb.addAnnotation(AnnotationBuilder.build(constraint));

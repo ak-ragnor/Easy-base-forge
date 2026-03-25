@@ -259,29 +259,28 @@ public class SchemaResolver {
 		dtoRegistry.put(name, DtoSchema.of(name, "", fields));
 	}
 
+	@SuppressWarnings("unchecked")
 	private List<DtoField> buildFields(Schema schema, Set<String> required) {
-		List<DtoField> fields = new ArrayList<>();
-		if (schema.getProperties() == null) return fields;
+		if (schema.getProperties() == null) {
+			return List.of();
+		}
 
-		schema.getProperties().forEach((propName, propSchema) -> {
-			String fieldName = toLowerCamelCase((String) propName);
-			boolean isRequired = required.contains(propName);
-			ApiSchema fieldType = resolve((Schema) propSchema, toPascalCase((String) propName));
-			List<ValidationConstraint> constraints = validationMapper.map((Schema) propSchema, isRequired);
-			boolean isNullable = fieldType.nullable();
-			boolean isReadOnly = Boolean.TRUE.equals(((Schema) propSchema).getReadOnly());
+		Map<String, Schema> properties = (Map<String, Schema>) schema.getProperties();
 
-			fields.add(new DtoField(
-					fieldName,
-					(String) propName,
-					fieldType.javaType(),
-					isRequired,
-					constraints,
-					isNullable,
-					isReadOnly));
-		});
+		return properties.entrySet().stream()
+				.map(entry -> buildField(entry.getKey(), entry.getValue(), required))
+				.collect(Collectors.toList());
+	}
 
-		return fields;
+	private DtoField buildField(String propName, Schema propSchema, Set<String> required) {
+		String fieldName = toLowerCamelCase(propName);
+		boolean isRequired = required.contains(propName);
+		ApiSchema fieldType = resolve(propSchema, toPascalCase(propName));
+		List<ValidationConstraint> constraints = validationMapper.map(propSchema, isRequired);
+		boolean isNullable = fieldType.nullable();
+		boolean isReadOnly = Boolean.TRUE.equals(propSchema.getReadOnly());
+
+		return new DtoField(fieldName, propName, fieldType.javaType(), isRequired, constraints, isNullable, isReadOnly);
 	}
 
 	/** Returns all DTOs in the global registry, keyed by class name. */

@@ -35,12 +35,15 @@ public class GeneratorConfig {
 
 	private Path resolvedOutputDirectory;
 
+	private transient LayoutStrategy layoutStrategy;
+
 	public String getBasePackage() {
 		return basePackage;
 	}
 
 	public void setBasePackage(String basePackage) {
 		this.basePackage = basePackage;
+		this.layoutStrategy = null;
 	}
 
 	public OutputConfig getOutput() {
@@ -49,6 +52,7 @@ public class GeneratorConfig {
 
 	public void setOutput(OutputConfig output) {
 		this.output = output;
+		this.layoutStrategy = null;
 	}
 
 	public StructureConfig getStructure() {
@@ -82,17 +86,12 @@ public class GeneratorConfig {
 	 * <p>Defaults to {@link FlatLayoutStrategy} when no {@code output.layout} is set.
 	 */
 	public LayoutStrategy getLayoutStrategy() {
-		final LayoutMode mode;
-		if (output != null && output.getLayout() != null) {
-			mode = output.getLayout();
-		} else {
-			mode = LayoutMode.FLAT;
+		if (layoutStrategy == null) {
+			LayoutMode mode = (output != null && output.getLayout() != null) ? output.getLayout() : LayoutMode.FLAT;
+			layoutStrategy = LayoutStrategyFactory.create(mode, basePackage);
 		}
-		if (mode == LayoutMode.FLAT) {
-			return new FlatLayoutStrategy(basePackage);
-		} else {
-			return new MultiModuleLayoutStrategy(basePackage);
-		}
+
+		return layoutStrategy;
 	}
 
 	/**

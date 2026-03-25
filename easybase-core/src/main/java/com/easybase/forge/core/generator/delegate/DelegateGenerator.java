@@ -1,11 +1,13 @@
 package com.easybase.forge.core.generator.delegate;
 
 import java.nio.file.Path;
+import java.util.List;
 
 import javax.lang.model.element.Modifier;
 
 import com.easybase.forge.core.config.GeneratorConfig;
 import com.easybase.forge.core.config.PaginationMode;
+import com.easybase.forge.core.generator.ArtifactGenerator;
 import com.easybase.forge.core.generator.GeneratedArtifact;
 import com.easybase.forge.core.generator.GeneratorUtils;
 import com.easybase.forge.core.generator.TypeNameResolver;
@@ -19,9 +21,10 @@ import com.squareup.javapoet.*;
  * (either {@link com.easybase.forge.core.config.ResponseEntityMode} or a custom
  * response wrapper when {@code generate.responseWrapper.enabled: true}).
  */
-public class DelegateGenerator {
+public class DelegateGenerator implements ArtifactGenerator {
 
-	public GeneratedArtifact generate(ApiResource resource, GeneratorConfig config) {
+	@Override
+	public List<GeneratedArtifact> generate(ApiResource resource, GeneratorConfig config) {
 		String delegatePkg =
 				config.resolvePackage(config.getStructure().getDelegate().getPkg(), resource.packageSuffix());
 		String dtoPkg = config.resolvePackage(config.getStructure().getDto().getPkg(), resource.packageSuffix());
@@ -47,7 +50,7 @@ public class DelegateGenerator {
 		Path outputPath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), delegatePkg)
 				.resolve(delegateName + ".java");
 
-		return new GeneratedArtifact(outputPath, ArtifactType.DELEGATE, javaFile.toString());
+		return List.of(new GeneratedArtifact(outputPath, ArtifactType.DELEGATE, javaFile.toString()));
 	}
 
 	private MethodSpec buildMethod(ApiEndpoint endpoint, TypeNameResolver typeResolver, GeneratorConfig config) {
