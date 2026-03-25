@@ -1,0 +1,109 @@
+openapi: "3.0.3"
+info:
+  title: User API
+  version: "1.0.0"
+
+tags:
+  - name: users
+    description: User operations
+
+paths:
+  /users:
+    get:
+      tags: [users]
+      operationId: getUsers
+      summary: List users (paginated)
+      parameters:
+        - name: filter
+          in: query
+          required: false
+          schema: { type: string }
+        - name: page
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: size
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserDto"
+
+    post:
+      tags: [users]
+      operationId: createUser
+      summary: Create a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserDto"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+
+  /users/{userId}:
+    get:
+      tags: [users]
+      operationId: getUserById
+      summary: Get user by ID
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDto"
+
+    delete:
+      tags: [users]
+      operationId: deleteUser
+      summary: Delete a user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "204":
+          description: No Content
+
+components:
+  schemas:
+    UserDto:
+      type: object
+      required:
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        firstName:
+          type: string
+          maxLength: 100
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true

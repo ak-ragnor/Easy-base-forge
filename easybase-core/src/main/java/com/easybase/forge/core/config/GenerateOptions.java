@@ -1,5 +1,8 @@
 package com.easybase.forge.core.config;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Maps the {@code generate} block in {@code easybase-config.yaml}.
  */
@@ -10,7 +13,18 @@ public class GenerateOptions {
 	private boolean beanValidation = true;
 	private PaginationMode pagination = PaginationMode.NONE;
 	private boolean addGeneratedAnnotation = true;
+
 	private String author = "";
+
+	private List<String> authors = new ArrayList<>();
+
+	private ResponseWrapperConfig responseWrapper = new ResponseWrapperConfig();
+
+	private String crossOrigin = null;
+
+	private boolean slf4j = false;
+
+	private String postGenerateCommand = null;
 
 	public boolean isDelegateImpl() {
 		return delegateImpl;
@@ -58,5 +72,55 @@ public class GenerateOptions {
 
 	public void setAuthor(String author) {
 		this.author = author;
+	}
+
+	public List<String> getAuthors() {
+		return authors;
+	}
+
+	public void setAuthors(List<String> authors) {
+		this.authors = authors != null ? authors : new ArrayList<>();
+	}
+
+	public List<String> getAllAuthors() {
+		List<String> all = new ArrayList<>(authors);
+
+		if (author != null && !author.isBlank() && !all.contains(author)) {
+			all.add(0, author);
+		}
+
+		return all;
+	}
+
+	public ResponseWrapperConfig getResponseWrapper() {
+		return responseWrapper;
+	}
+
+	public void setResponseWrapper(ResponseWrapperConfig responseWrapper) {
+		this.responseWrapper = responseWrapper != null ? responseWrapper : new ResponseWrapperConfig();
+	}
+
+	public String getCrossOrigin() {
+		return crossOrigin;
+	}
+
+	public void setCrossOrigin(String crossOrigin) {
+		this.crossOrigin = crossOrigin;
+	}
+
+	public boolean isSlf4j() {
+		return slf4j;
+	}
+
+	public void setSlf4j(boolean slf4j) {
+		this.slf4j = slf4j;
+	}
+
+	public String getPostGenerateCommand() {
+		return postGenerateCommand;
+	}
+
+	public void setPostGenerateCommand(String postGenerateCommand) {
+		this.postGenerateCommand = postGenerateCommand;
 	}
 }

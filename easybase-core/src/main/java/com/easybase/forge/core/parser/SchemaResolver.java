@@ -269,9 +269,16 @@ public class SchemaResolver {
 			ApiSchema fieldType = resolve((Schema) propSchema, toPascalCase((String) propName));
 			List<ValidationConstraint> constraints = validationMapper.map((Schema) propSchema, isRequired);
 			boolean isNullable = fieldType.nullable();
+			boolean isReadOnly = Boolean.TRUE.equals(((Schema) propSchema).getReadOnly());
 
 			fields.add(new DtoField(
-					fieldName, (String) propName, fieldType.javaType(), isRequired, constraints, isNullable));
+					fieldName,
+					(String) propName,
+					fieldType.javaType(),
+					isRequired,
+					constraints,
+					isNullable,
+					isReadOnly));
 		});
 
 		return fields;

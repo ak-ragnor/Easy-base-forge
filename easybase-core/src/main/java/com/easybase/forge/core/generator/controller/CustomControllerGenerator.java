@@ -16,11 +16,17 @@ import com.squareup.javapoet.*;
  *
  * <p>This file is created only once — it is never overwritten on regeneration.
  * It extends the generated base controller and delegates everything to it.
+ *
+ * <p>Optional annotations ({@code @CrossOrigin}, {@code @Slf4j}) are added when
+ * the corresponding config options are set.
  */
 public class CustomControllerGenerator {
 
 	private static final ClassName REST_CONTROLLER =
 			ClassName.get("org.springframework.web.bind.annotation", "RestController");
+	private static final ClassName CROSS_ORIGIN =
+			ClassName.get("org.springframework.web.bind.annotation", "CrossOrigin");
+	private static final ClassName SLF4J = ClassName.get("lombok.extern.slf4j", "Slf4j");
 
 	public GeneratedArtifact generate(ApiResource resource, GeneratorConfig config) {
 		String controllerPkg =
@@ -37,18 +43,30 @@ public class CustomControllerGenerator {
 		ClassName baseType = ClassName.get(basePkg, baseName);
 		ClassName delegateType = ClassName.get(delegatePkg, delegateName);
 
-		TypeSpec typeSpec = TypeSpec.classBuilder(controllerName)
+		TypeSpec.Builder classBuilder = TypeSpec.classBuilder(controllerName)
 				.addModifiers(Modifier.PUBLIC)
-				.addAnnotation(REST_CONTROLLER)
 				.superclass(baseType)
 				.addMethod(MethodSpec.constructorBuilder()
 						.addModifiers(Modifier.PUBLIC)
 						.addParameter(delegateType, "delegate")
 						.addStatement("super(delegate)")
-						.build())
-				.build();
+						.build());
 
-		JavaFile javaFile = JavaFile.builder(controllerPkg, typeSpec)
+		String crossOrigin = config.getGenerate().getCrossOrigin();
+
+		if (crossOrigin != null && !crossOrigin.isBlank()) {
+			classBuilder.addAnnotation(AnnotationSpec.builder(CROSS_ORIGIN)
+					.addMember("origins", "$S", crossOrigin)
+					.build());
+		}
+
+		if (config.getGenerate().isSlf4j()) {
+			classBuilder.addAnnotation(SLF4J);
+		}
+
+		classBuilder.addAnnotation(REST_CONTROLLER);
+
+		JavaFile javaFile = JavaFile.builder(controllerPkg, classBuilder.build())
 				.skipJavaLangImports(true)
 				.indent("    ")
 				.build();

@@ -16,14 +16,6 @@ import com.squareup.javapoet.*;
 
 /**
  * Generates one DTO class per {@link DtoSchema} in a resource.
- *
- * <ul>
- *   <li>Plain DTOs: {@code @Data} Lombok class with Jackson {@code @JsonProperty} + bean validation.</li>
- *   <li>Union bases ({@link DtoSchema#union()} non-null): abstract class with
- *       {@code @JsonTypeInfo} / {@code @JsonSubTypes} — no fields, no Lombok.</li>
- *   <li>Union variants ({@link DtoSchema#parentClass()} non-null): {@code @Data} class that
- *       extends the abstract base.</li>
- * </ul>
  */
 public class DtoGenerator {
 
@@ -31,6 +23,9 @@ public class DtoGenerator {
 	private static final ClassName JSON_SUB_TYPES = ClassName.get("com.fasterxml.jackson.annotation", "JsonSubTypes");
 	private static final ClassName JSON_SUB_TYPE =
 			ClassName.get("com.fasterxml.jackson.annotation", "JsonSubTypes", "Type");
+	private static final ClassName JSON_PROPERTY = ClassName.get("com.fasterxml.jackson.annotation", "JsonProperty");
+	private static final ClassName JSON_PROPERTY_ACCESS =
+			ClassName.get("com.fasterxml.jackson.annotation", "JsonProperty", "Access");
 	private static final ClassName NULLABLE = ClassName.get("org.springframework.lang", "Nullable");
 
 	public List<GeneratedArtifact> generate(ApiResource resource, GeneratorConfig config) {
@@ -58,7 +53,6 @@ public class DtoGenerator {
 
 		addGeneratedJavadoc(classBuilder, config);
 
-		// Union variant: extend the abstract base
 		if (schema.parentClass() != null) {
 			classBuilder.superclass(ClassName.get(dtoPkg, schema.parentClass()));
 		}
@@ -67,7 +61,6 @@ public class DtoGenerator {
 			FieldSpec.Builder fb =
 					FieldSpec.builder(typeResolver.resolve(field.javaType()), field.name(), Modifier.PRIVATE);
 
-			// @Nullable for optional fields with nullable: true
 			if (field.nullable()) {
 				fb.addAnnotation(NULLABLE);
 			}
@@ -79,10 +72,14 @@ public class DtoGenerator {
 				}
 			}
 
-			// @JsonProperty — always added to preserve original spec names
-			fb.addAnnotation(AnnotationSpec.builder(ClassName.get("com.fasterxml.jackson.annotation", "JsonProperty"))
-					.addMember("value", "$S", field.jsonName())
-					.build());
+			AnnotationSpec.Builder jpBuilder =
+					AnnotationSpec.builder(JSON_PROPERTY).addMember("value", "$S", field.jsonName());
+
+			if (field.readOnly()) {
+				jpBuilder.addMember("access", "$T.READ_ONLY", JSON_PROPERTY_ACCESS);
+			}
+
+			fb.addAnnotation(jpBuilder.build());
 
 			classBuilder.addField(fb.build());
 		}
@@ -101,9 +98,8 @@ public class DtoGenerator {
 		}
 
 		StringBuilder doc = new StringBuilder();
-		String author = config.getGenerate().getAuthor();
 
-		if (author != null && !author.isBlank()) {
+		for (String author : config.getGenerate().getAllAuthors()) {
 			doc.append("@author ").append(author).append("\n");
 		}
 
@@ -115,14 +111,12 @@ public class DtoGenerator {
 	private String generateUnionBase(DtoSchema schema, String dtoPkg, GeneratorConfig config) {
 		UnionDiscriminator union = schema.union();
 
-		// @JsonTypeInfo(use = NAME, include = PROPERTY, property = "discriminatorProp")
 		AnnotationSpec jsonTypeInfo = AnnotationSpec.builder(JSON_TYPE_INFO)
 				.addMember("use", "$T.Id.NAME", JSON_TYPE_INFO)
 				.addMember("include", "$T.As.PROPERTY", JSON_TYPE_INFO)
 				.addMember("property", "$S", union.propertyName())
 				.build();
 
-		// @JsonSubTypes({ @Type(value = Foo.class, name = "foo"), ... })
 		AnnotationSpec.Builder jsonSubTypes = AnnotationSpec.builder(JSON_SUB_TYPES);
 		for (UnionDiscriminator.SubtypeMapping m : union.subtypes()) {
 			AnnotationSpec typeAnnotation = AnnotationSpec.builder(JSON_SUB_TYPE)

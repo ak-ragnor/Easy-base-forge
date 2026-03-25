@@ -8,7 +8,7 @@ import javax.lang.model.element.Modifier;
 
 import com.easybase.forge.core.config.GeneratorConfig;
 import com.easybase.forge.core.config.PaginationMode;
-import com.easybase.forge.core.config.ResponseEntityMode;
+import com.easybase.forge.core.config.ResponseWrapperConfig;
 import com.easybase.forge.core.generator.GeneratedArtifact;
 import com.easybase.forge.core.generator.GeneratorUtils;
 import com.easybase.forge.core.generator.TypeNameResolver;
@@ -37,6 +37,9 @@ public class BaseControllerGenerator {
 			ClassName.get("org.springframework.web.bind.annotation", "RequestParam");
 	private static final ClassName REQUEST_BODY =
 			ClassName.get("org.springframework.web.bind.annotation", "RequestBody");
+	private static final ClassName RESPONSE_STATUS =
+			ClassName.get("org.springframework.web.bind.annotation", "ResponseStatus");
+	private static final ClassName HTTP_STATUS = ClassName.get("org.springframework.http", "HttpStatus");
 	private static final ClassName VALID = ClassName.get("jakarta.validation", "Valid");
 
 	public GeneratedArtifact generate(ApiResource resource, GeneratorConfig config) {
@@ -67,7 +70,7 @@ public class BaseControllerGenerator {
 						.addStatement("return delegate")
 						.build());
 
-		addGeneratedJavadoc(classBuilder, config);
+		GeneratorUtils.addGeneratedJavadoc(classBuilder, config);
 
 		for (ApiEndpoint endpoint : resource.endpoints()) {
 			classBuilder.addMethod(buildEndpointMethod(endpoint, typeResolver, delegateType, config));
@@ -86,24 +89,41 @@ public class BaseControllerGenerator {
 
 	private MethodSpec buildEndpointMethod(
 			ApiEndpoint endpoint, TypeNameResolver typeResolver, ClassName delegateType, GeneratorConfig config) {
-		ResponseEntityMode mode = config.getGenerate().getResponseEntityWrapping();
+
 		PaginationMode paginationMode = config.getGenerate().getPagination();
+		ResponseWrapperConfig wrapper = config.getGenerate().getResponseWrapper();
+
+		TypeName returnType = typeResolver.resolveReturnType(
+				endpoint, config.getGenerate().getResponseEntityWrapping(), wrapper, paginationMode);
 
 		boolean applyPagination = endpoint.paginated() && paginationMode == PaginationMode.SPRING_DATA;
-
-		TypeName returnType = resolveReturnType(endpoint, typeResolver, mode, applyPagination);
 
 		MethodSpec.Builder mb = MethodSpec.methodBuilder(endpoint.operationId())
 				.addModifiers(Modifier.PUBLIC)
 				.returns(returnType)
 				.addAnnotation(mappingAnnotation(endpoint.httpMethod(), endpoint.path()));
 
+		if (wrapper != null && wrapper.isEnabled()) {
+			int statusCode = endpoint.primaryResponse() != null
+					? endpoint.primaryResponse().statusCode()
+					: 200;
+
+			if (statusCode == 201) {
+				mb.addAnnotation(AnnotationSpec.builder(RESPONSE_STATUS)
+						.addMember("value", "$T.CREATED", HTTP_STATUS)
+						.build());
+			} else if (statusCode == 204) {
+				mb.addAnnotation(AnnotationSpec.builder(RESPONSE_STATUS)
+						.addMember("value", "$T.NO_CONTENT", HTTP_STATUS)
+						.build());
+			}
+		}
+
 		List<String> delegateArgs = new ArrayList<>();
 
-		// Path + query parameters
 		for (ApiParameter param : endpoint.parameters()) {
 			if (param.in() == ParameterLocation.PATH || param.in() == ParameterLocation.QUERY) {
-				String javaName = sanitizeName(param.name());
+				String javaName = GeneratorUtils.sanitizeName(param.name());
 				ParameterSpec.Builder pb = ParameterSpec.builder(
 						typeResolver.resolve(param.schema().javaType()), javaName);
 
@@ -114,7 +134,11 @@ public class BaseControllerGenerator {
 				} else {
 					AnnotationSpec.Builder qa =
 							AnnotationSpec.builder(REQUEST_PARAM).addMember("value", "$S", param.name());
-					if (!param.required()) qa.addMember("required", "false");
+
+					if (!param.required()) {
+						qa.addMember("required", "false");
+					}
+
 					pb.addAnnotation(qa.build());
 				}
 				mb.addParameter(pb.build());
@@ -125,13 +149,14 @@ public class BaseControllerGenerator {
 		// Request body
 		if (endpoint.requestBody() != null) {
 			String bodyType = endpoint.requestBody().schema().javaType();
-			String bodyName = deriveBodyParamName(bodyType);
+			String bodyName = GeneratorUtils.deriveBodyParamName(bodyType);
 
 			ParameterSpec.Builder pb = ParameterSpec.builder(typeResolver.resolve(bodyType), bodyName)
 					.addAnnotation(VALID)
 					.addAnnotation(AnnotationSpec.builder(REQUEST_BODY)
 							.addMember("required", "$L", endpoint.requestBody().required())
 							.build());
+
 			mb.addParameter(pb.build());
 			delegateArgs.add(bodyName);
 		}
@@ -160,22 +185,6 @@ public class BaseControllerGenerator {
 		return mb.build();
 	}
 
-	private static void addGeneratedJavadoc(TypeSpec.Builder classBuilder, GeneratorConfig config) {
-		if (!config.getGenerate().isAddGeneratedAnnotation()) {
-			return;
-		}
-
-		StringBuilder doc = new StringBuilder();
-		String author = config.getGenerate().getAuthor();
-
-		if (author != null && !author.isBlank()) {
-			doc.append("@author ").append(author).append("\n");
-		}
-		doc.append("@generated\n");
-
-		classBuilder.addJavadoc(doc.toString());
-	}
-
 	private static String buildCurlSnippet(ApiEndpoint endpoint) {
 		StringBuilder sb = new StringBuilder("curl -X ")
 				.append(endpoint.httpMethod().name())
@@ -189,29 +198,6 @@ public class BaseControllerGenerator {
 		return sb.toString();
 	}
 
-	private TypeName resolveReturnType(
-			ApiEndpoint endpoint, TypeNameResolver typeResolver, ResponseEntityMode mode, boolean paginated) {
-		ApiResponse primary = endpoint.primaryResponse();
-
-		String bodyType =
-				(primary != null && primary.schema() != null) ? primary.schema().javaType() : null;
-
-		boolean isVoid = bodyType == null || bodyType.equals("Void");
-
-		if (paginated && !isVoid) {
-			return switch (mode) {
-				case ALWAYS -> typeResolver.responseEntityPage(bodyType);
-				case NEVER, VOID_ONLY -> typeResolver.page(bodyType);
-			};
-		}
-
-		return switch (mode) {
-			case ALWAYS -> typeResolver.responseEntity(bodyType);
-			case NEVER -> isVoid ? TypeName.VOID : typeResolver.resolve(bodyType);
-			case VOID_ONLY -> isVoid ? typeResolver.responseEntity(null) : typeResolver.resolve(bodyType);
-		};
-	}
-
 	private static AnnotationSpec mappingAnnotation(HttpMethod method, String path) {
 		ClassName annotation =
 				switch (method) {
@@ -223,32 +209,5 @@ public class BaseControllerGenerator {
 					default -> GET_MAPPING;
 				};
 		return AnnotationSpec.builder(annotation).addMember("value", "$S", path).build();
-	}
-
-	private static String sanitizeName(String name) {
-		String[] parts = name.split("[\\-\\.]");
-
-		if (parts.length == 1) {
-			return name;
-		}
-
-		StringBuilder sb = new StringBuilder(parts[0]);
-
-		for (int i = 1; i < parts.length; i++) {
-			if (!parts[i].isEmpty()) {
-				sb.append(Character.toUpperCase(parts[i].charAt(0)));
-				sb.append(parts[i].substring(1));
-			}
-		}
-
-		return sb.toString();
-	}
-
-	private static String deriveBodyParamName(String javaType) {
-		if (javaType == null || javaType.isEmpty()) {
-			return "body";
-		}
-
-		return Character.toLowerCase(javaType.charAt(0)) + javaType.substring(1);
 	}
 }

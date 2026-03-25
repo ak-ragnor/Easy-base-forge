@@ -1,7 +1,9 @@
 package com.easybase.forge.maven;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -38,6 +40,8 @@ import com.easybase.forge.core.writer.GenerationReport;
  */
 @Mojo(name = "generate", defaultPhase = LifecyclePhase.GENERATE_SOURCES)
 public class GenerateMojo extends AbstractMojo {
+
+	private static final long POST_GENERATE_TIMEOUT_MINUTES = 10L;
 
 	/** Path to the OpenAPI YAML or JSON specification file. Required. */
 	@Parameter(required = true)
@@ -110,6 +114,38 @@ public class GenerateMojo extends AbstractMojo {
 		project.addCompileSourceRoot(resolvedOutput.toAbsolutePath().toString());
 
 		getLog().info("EasyBase: added " + resolvedOutput + " to compile source roots.");
+
+		String postCmd = config.getGenerate().getPostGenerateCommand();
+
+		if (postCmd != null && !postCmd.isBlank()) {
+			getLog().info("EasyBase: running post-generate command: " + postCmd);
+			runPostGenerateCommand(postCmd, resolvedOutput);
+		}
+	}
+
+	void runPostGenerateCommand(String command, Path workingDir) throws MojoExecutionException {
+		try {
+			Process process = new ProcessBuilder("bash", "-c", command)
+					.directory(workingDir.toFile())
+					.inheritIO()
+					.start();
+
+			boolean finished = process.waitFor(POST_GENERATE_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+
+			if (!finished) {
+				process.destroyForcibly();
+				throw new MojoExecutionException("Post-generate command timed out after "
+						+ POST_GENERATE_TIMEOUT_MINUTES + " minutes: " + command);
+			}
+
+			int exit = process.exitValue();
+
+			if (exit != 0) {
+				throw new MojoExecutionException("Post-generate command failed (exit " + exit + "): " + command);
+			}
+		} catch (IOException | InterruptedException e) {
+			throw new MojoExecutionException("Failed to run post-generate command: " + command, e);
+		}
 	}
 
 	private void validateParameters() throws MojoExecutionException {
