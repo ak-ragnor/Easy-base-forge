@@ -1,4 +1,6 @@
-package com.easybase.forge.core.config;
+package com.easybase.forge.core.config.layout;
+
+import com.easybase.forge.core.config.LayoutMode;
 
 public final class LayoutStrategyFactory {
 

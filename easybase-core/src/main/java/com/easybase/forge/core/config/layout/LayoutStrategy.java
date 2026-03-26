@@ -1,4 +1,6 @@
-package com.easybase.forge.core.config;
+package com.easybase.forge.core.config.layout;
+
+import com.easybase.forge.core.config.LayoutMode;
 
 /**
  * Strategy for resolving Java package names from config patterns.
@@ -11,7 +13,7 @@ package com.easybase.forge.core.config;
  *       in shared packages (e.g. {@code com.example.controller}).</li>
  * </ul>
  *
- * <p>Obtain an instance via {@link GeneratorConfig#getLayoutStrategy()}.
+ * <p>Obtain an instance via {@link com.easybase.forge.core.config.GeneratorConfig#getLayoutStrategy()}.
  */
 public interface LayoutStrategy {
 

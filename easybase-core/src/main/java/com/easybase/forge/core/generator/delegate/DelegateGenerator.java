@@ -6,7 +6,6 @@ import java.util.List;
 import javax.lang.model.element.Modifier;
 
 import com.easybase.forge.core.config.GeneratorConfig;
-import com.easybase.forge.core.config.PaginationMode;
 import com.easybase.forge.core.generator.ArtifactGenerator;
 import com.easybase.forge.core.generator.GeneratedArtifact;
 import com.easybase.forge.core.generator.GeneratorUtils;
@@ -60,28 +59,11 @@ public class DelegateGenerator implements ArtifactGenerator {
 				config.getGenerate().getResponseWrapper(),
 				config.getGenerate().getPagination());
 
-		boolean applyPagination =
-				endpoint.paginated() && config.getGenerate().getPagination() == PaginationMode.SPRING_DATA;
-
 		MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(endpoint.operationId())
 				.addModifiers(Modifier.PUBLIC, Modifier.ABSTRACT)
 				.returns(returnType);
 
-		for (ApiParameter param : endpoint.parameters()) {
-			if (param.in() == ParameterLocation.PATH || param.in() == ParameterLocation.QUERY) {
-				methodBuilder.addParameter(
-						typeResolver.resolve(param.schema().javaType()), GeneratorUtils.sanitizeName(param.name()));
-			}
-		}
-
-		if (endpoint.requestBody() != null) {
-			String bodyType = endpoint.requestBody().schema().javaType();
-			methodBuilder.addParameter(typeResolver.resolve(bodyType), GeneratorUtils.deriveBodyParamName(bodyType));
-		}
-
-		if (applyPagination) {
-			methodBuilder.addParameter(TypeNameResolver.pageableType(), "pageable");
-		}
+		GeneratorUtils.addEndpointParameters(methodBuilder, endpoint, typeResolver, config);
 
 		return methodBuilder.build();
 	}

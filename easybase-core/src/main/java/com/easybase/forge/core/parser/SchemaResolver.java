@@ -108,8 +108,14 @@ public class SchemaResolver {
 
 		List<Schema> oneOf = composed.getOneOf();
 		List<Schema> anyOf = composed.getAnyOf();
-		List<Schema> variants =
-				oneOf != null && !oneOf.isEmpty() ? oneOf : anyOf != null && !anyOf.isEmpty() ? anyOf : null;
+
+		List<Schema> variants = null;
+
+		if (oneOf != null && !oneOf.isEmpty()) {
+			variants = oneOf;
+		} else if (anyOf != null && !anyOf.isEmpty()) {
+			variants = anyOf;
+		}
 
 		if (variants != null) {
 			return resolveOneOfAnyOf(variants, composed.getDiscriminator(), hintName);
@@ -123,9 +129,19 @@ public class SchemaResolver {
 		List<DtoField> mergedFields = new ArrayList<>();
 
 		for (Schema part : allOf) {
-			Schema actual = part.get$ref() != null ? resolveRef(extractRefName(part.get$ref())) : part;
+			Schema actual = part;
+
+			if (part.get$ref() != null) {
+				actual = resolveRef(extractRefName(part.get$ref()));
+			}
+
 			if (actual != null && actual.getProperties() != null) {
-				Set<String> required = actual.getRequired() != null ? new HashSet<>(actual.getRequired()) : Set.of();
+				Set<String> required = Set.of();
+
+				if (actual.getRequired() != null) {
+					required = new HashSet<>(actual.getRequired());
+				}
+
 				mergedFields.addAll(buildFields(actual, required));
 			}
 		}
@@ -175,8 +191,11 @@ public class SchemaResolver {
 		}
 
 		String baseName = toPascalCase(hintName);
-		Map<String, String> explicitMapping =
-				discriminator.getMapping() != null ? discriminator.getMapping() : Map.of();
+		Map<String, String> explicitMapping = Map.of();
+
+		if (discriminator.getMapping() != null) {
+			explicitMapping = discriminator.getMapping();
+		}
 
 		List<UnionDiscriminator.SubtypeMapping> subtypes = new ArrayList<>();
 		for (String variantName : variantNames) {
@@ -218,16 +237,35 @@ public class SchemaResolver {
 		}
 
 		return switch (type) {
-			case "string" -> switch (format != null ? format : "") {
-				case "date" -> "LocalDate";
-				case "date-time" -> "OffsetDateTime";
-				case "uuid" -> "UUID";
-				case "binary" -> "byte[]";
-				case "byte" -> "byte[]";
-				default -> "String";
-			};
-			case "integer" -> "int64".equals(format) ? "Long" : "Integer";
-			case "number" -> "float".equals(format) ? "Float" : "BigDecimal";
+			case "string" -> {
+				String fmt = "";
+
+				if (format != null) {
+					fmt = format;
+				}
+
+				yield switch (fmt) {
+					case "date" -> "LocalDate";
+					case "date-time" -> "OffsetDateTime";
+					case "uuid" -> "UUID";
+					case "binary", "byte" -> "byte[]";
+                    default -> "String";
+				};
+			}
+			case "integer" -> {
+				if ("int64".equals(format)) {
+					yield "Long";
+				}
+
+				yield "Integer";
+			}
+			case "number" -> {
+				if ("float".equals(format)) {
+					yield "Float";
+				}
+
+				yield "BigDecimal";
+			}
 			case "boolean" -> "Boolean";
 			default -> "Object";
 		};
@@ -252,7 +290,11 @@ public class SchemaResolver {
 
 		dtoRegistry.put(name, DtoSchema.of(name, "", List.of()));
 
-		Set<String> required = schema.getRequired() != null ? new HashSet<>(schema.getRequired()) : Set.of();
+		Set<String> required = Set.of();
+
+		if (schema.getRequired() != null) {
+			required = new HashSet<>(schema.getRequired());
+		}
 
 		List<DtoField> fields = buildFields(schema, required);
 
@@ -281,11 +323,6 @@ public class SchemaResolver {
 		boolean isReadOnly = Boolean.TRUE.equals(propSchema.getReadOnly());
 
 		return new DtoField(fieldName, propName, fieldType.javaType(), isRequired, constraints, isNullable, isReadOnly);
-	}
-
-	/** Returns all DTOs in the global registry, keyed by class name. */
-	public Map<String, DtoSchema> getDtoRegistry() {
-		return Collections.unmodifiableMap(dtoRegistry);
 	}
 
 	/**
@@ -328,16 +365,6 @@ public class SchemaResolver {
 		}
 	}
 
-	/**
-	 * Marks a schema name as referenced in the current session.
-	 * Used by {@link ResourceExtractor} for types already resolved into endpoint records.
-	 */
-	public void ensureSessionTracked(String className) {
-		if (className != null && dtoRegistry.containsKey(className)) {
-			ensureTransitivesTracked(className);
-		}
-	}
-
 	/** Clears the session reference tracker. Call before processing each new resource. */
 	public void resetSession() {
 		sessionReferenced.clear();
@@ -358,7 +385,11 @@ public class SchemaResolver {
 
 		int idx = ref.lastIndexOf('/');
 
-		return idx >= 0 ? ref.substring(idx + 1) : ref;
+		if (idx >= 0) {
+			return ref.substring(idx + 1);
+		}
+
+		return ref;
 	}
 
 	private static boolean hasProperties(Schema schema) {
@@ -376,7 +407,10 @@ public class SchemaResolver {
 		for (String part : parts) {
 			if (!part.isEmpty()) {
 				sb.append(Character.toUpperCase(part.charAt(0)));
-				sb.append(part.length() > 1 ? part.substring(1) : "");
+
+				if (part.length() > 1) {
+					sb.append(part.substring(1));
+				}
 			}
 		}
 

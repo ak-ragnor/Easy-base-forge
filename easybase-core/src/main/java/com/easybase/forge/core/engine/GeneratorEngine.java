@@ -69,11 +69,15 @@ public class GeneratorEngine {
 
 		ResourceExtractor extractor = new ResourceExtractor(schemaResolver, validationMapper, paginationDetector);
 
-		String title = openApi.getInfo() != null ? openApi.getInfo().getTitle() : "Unknown";
-		String version = openApi.getInfo() != null ? openApi.getInfo().getVersion() : "0.0.0";
-		List<ApiResource> resources = extractor.extract(openApi);
+		String title = "Unknown";
+		String version = "0.0.0";
 
-		return new ApiSpec(title, version, resources);
+		if (openApi.getInfo() != null) {
+			title = openApi.getInfo().getTitle();
+			version = openApi.getInfo().getVersion();
+		}
+
+		return new ApiSpec(title, version, extractor.extract(openApi));
 	}
 
 	private static void logReport(GenerationReport report) {

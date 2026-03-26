@@ -35,9 +35,13 @@ public class DtoGenerator implements ArtifactGenerator {
 		List<GeneratedArtifact> artifacts = new ArrayList<>();
 
 		for (DtoSchema schema : resource.dtoSchemas()) {
-			String content = schema.union() != null
-					? generateUnionBase(schema, dtoPkg, config)
-					: generateDto(schema, dtoPkg, typeResolver, config);
+			String content;
+
+			if (schema.union() != null) {
+				content = generateUnionBase(schema, dtoPkg, config);
+			} else {
+				content = generateDto(schema, dtoPkg, typeResolver, config);
+			}
 
 			Path outputPath = GeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), dtoPkg)
 					.resolve(schema.className() + ".java");
@@ -52,7 +56,7 @@ public class DtoGenerator implements ArtifactGenerator {
 				.addModifiers(Modifier.PUBLIC)
 				.addAnnotation(ClassName.get("lombok", "Data"));
 
-		addGeneratedJavadoc(classBuilder, config);
+		GeneratorUtils.addGeneratedJavadoc(classBuilder, config);
 
 		if (schema.parentClass() != null) {
 			classBuilder.superclass(ClassName.get(dtoPkg, schema.parentClass()));
@@ -92,22 +96,6 @@ public class DtoGenerator implements ArtifactGenerator {
 		return javaFile.toString();
 	}
 
-	private static void addGeneratedJavadoc(TypeSpec.Builder classBuilder, GeneratorConfig config) {
-		if (!config.getGenerate().isAddGeneratedAnnotation()) {
-			return;
-		}
-
-		StringBuilder doc = new StringBuilder();
-
-		for (String author : config.getGenerate().getAllAuthors()) {
-			doc.append("@author ").append(author).append("\n");
-		}
-
-		doc.append("@generated\n");
-
-		classBuilder.addJavadoc(doc.toString());
-	}
-
 	private String generateUnionBase(DtoSchema schema, String dtoPkg, GeneratorConfig config) {
 		UnionDiscriminator union = schema.union();
 
@@ -131,7 +119,7 @@ public class DtoGenerator implements ArtifactGenerator {
 				.addAnnotation(jsonTypeInfo)
 				.addAnnotation(jsonSubTypes.build());
 
-		addGeneratedJavadoc(typeBuilder, config);
+		GeneratorUtils.addGeneratedJavadoc(typeBuilder, config);
 
 		return JavaFile.builder(dtoPkg, typeBuilder.build())
 				.skipJavaLangImports(true)

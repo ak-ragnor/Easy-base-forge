@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import com.easybase.forge.core.config.layout.FlatLayoutStrategy;
+import com.easybase.forge.core.config.layout.LayoutStrategy;
+import com.easybase.forge.core.config.layout.MultiModuleLayoutStrategy;
+
 class LayoutStrategyTest {
 	@Test
 	void multiModule_substitutesMidSegment() {

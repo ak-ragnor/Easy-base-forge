@@ -2,6 +2,7 @@ package com.easybase.forge.core.config;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Maps the {@code generate} block in {@code easybase-config.yaml}.
@@ -79,7 +80,11 @@ public class GenerateOptions {
 	}
 
 	public void setAuthors(List<String> authors) {
-		this.authors = authors != null ? authors : new ArrayList<>();
+		if (authors != null) {
+			this.authors = authors;
+		} else {
+			this.authors = new ArrayList<>();
+		}
 	}
 
 	public List<String> getAllAuthors() {
@@ -97,7 +102,7 @@ public class GenerateOptions {
 	}
 
 	public void setResponseWrapper(ResponseWrapperConfig responseWrapper) {
-		this.responseWrapper = responseWrapper != null ? responseWrapper : new ResponseWrapperConfig();
+        this.responseWrapper = Objects.requireNonNullElseGet(responseWrapper, ResponseWrapperConfig::new);
 	}
 
 	public String getCrossOrigin() {

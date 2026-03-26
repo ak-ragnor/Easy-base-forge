@@ -2,6 +2,9 @@ package com.easybase.forge.core.config;
 
 import java.nio.file.Path;
 
+import com.easybase.forge.core.config.layout.LayoutStrategy;
+import com.easybase.forge.core.config.layout.LayoutStrategyFactory;
+
 /**
  * Root configuration object parsed from {@code easybase-config.yaml}.
  *
@@ -83,11 +86,16 @@ public class GeneratorConfig {
 	/**
 	 * Returns the {@link LayoutStrategy} for this configuration.
 	 *
-	 * <p>Defaults to {@link FlatLayoutStrategy} when no {@code output.layout} is set.
+	 * <p>Defaults to {@link com.easybase.forge.core.config.layout.FlatLayoutStrategy} when no {@code output.layout} is set.
 	 */
 	public LayoutStrategy getLayoutStrategy() {
 		if (layoutStrategy == null) {
-			LayoutMode mode = (output != null && output.getLayout() != null) ? output.getLayout() : LayoutMode.FLAT;
+			LayoutMode mode = LayoutMode.FLAT;
+
+			if (output != null && output.getLayout() != null) {
+				mode = output.getLayout();
+			}
+
 			layoutStrategy = LayoutStrategyFactory.create(mode, basePackage);
 		}
 

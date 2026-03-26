@@ -55,9 +55,13 @@ public class TypeNameResolver {
 	}
 
 	public TypeName responseEntity(String javaType) {
-		TypeName body = (javaType == null || javaType.equals("Void") || javaType.isBlank())
-				? ClassName.get(Void.class)
-				: resolve(javaType);
+		TypeName body;
+
+		if (javaType == null || javaType.isBlank() || javaType.equals("Void")) {
+			body = ClassName.get(Void.class);
+		} else {
+			body = resolve(javaType);
+		}
 
 		return ParameterizedTypeName.get(ClassName.get("org.springframework.http", "ResponseEntity"), body);
 	}
@@ -71,9 +75,13 @@ public class TypeNameResolver {
 	public TypeName page(String javaType) {
 		String elementType = stripListWrapper(javaType);
 
-		TypeName element = (elementType == null || elementType.isBlank() || elementType.equals("Void"))
-				? ClassName.get(Object.class)
-				: resolve(elementType);
+		TypeName element;
+
+		if (elementType == null || elementType.isBlank() || elementType.equals("Void")) {
+			element = ClassName.get(Object.class);
+		} else {
+			element = resolve(elementType);
+		}
 
 		return ParameterizedTypeName.get(ClassName.get("org.springframework.data.domain", "Page"), element);
 	}
@@ -96,9 +104,14 @@ public class TypeNameResolver {
 	 */
 	public TypeName customWrapper(String fqcn, String javaType) {
 		ClassName wrapper = fqcnToClassName(fqcn);
-		TypeName body = (javaType == null || javaType.isBlank() || javaType.equals("Void"))
-				? ClassName.get(Void.class)
-				: resolve(javaType);
+
+		TypeName body;
+
+		if (javaType == null || javaType.isBlank() || javaType.equals("Void")) {
+			body = ClassName.get(Void.class);
+		} else {
+			body = resolve(javaType);
+		}
 
 		return ParameterizedTypeName.get(wrapper, body);
 	}
@@ -111,11 +124,15 @@ public class TypeNameResolver {
 	 */
 	public TypeName customWrapperPage(String fqcn, String javaType) {
 		String elementType = stripListWrapper(javaType);
-
 		ClassName wrapper = fqcnToClassName(fqcn);
-		TypeName element = (elementType == null || elementType.isBlank() || elementType.equals("Void"))
-				? ClassName.get(Object.class)
-				: resolve(elementType);
+
+		TypeName element;
+
+		if (elementType == null || elementType.isBlank() || elementType.equals("Void")) {
+			element = ClassName.get(Object.class);
+		} else {
+			element = resolve(elementType);
+		}
 
 		return ParameterizedTypeName.get(wrapper, element);
 	}
@@ -135,8 +152,12 @@ public class TypeNameResolver {
 		boolean applyPagination = endpoint.paginated() && paginationMode == PaginationMode.SPRING_DATA;
 
 		ApiResponse primary = endpoint.primaryResponse();
-		String bodyType =
-				(primary != null && primary.schema() != null) ? primary.schema().javaType() : null;
+
+		String bodyType = null;
+
+		if (primary != null && primary.schema() != null) {
+			bodyType = primary.schema().javaType();
+		}
 
 		boolean isVoid = bodyType == null || bodyType.equals("Void");
 
@@ -161,8 +182,20 @@ public class TypeNameResolver {
 
 		return switch (mode) {
 			case ALWAYS -> responseEntity(bodyType);
-			case NEVER -> isVoid ? TypeName.VOID : resolve(bodyType);
-			case VOID_ONLY -> isVoid ? responseEntity(null) : resolve(bodyType);
+			case NEVER -> {
+				if (isVoid) {
+					yield TypeName.VOID;
+				}
+
+				yield resolve(bodyType);
+			}
+			case VOID_ONLY -> {
+				if (isVoid) {
+					yield responseEntity(null);
+				}
+
+				yield resolve(bodyType);
+			}
 		};
 	}
 

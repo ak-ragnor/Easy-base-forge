@@ -28,8 +28,9 @@ public class OpenApiLoader {
 		List<String> messages = result.getMessages();
 
 		if (result.getOpenAPI() == null) {
-			String errors = messages == null ? "(no details)" : String.join(", ", messages);
-			throw new ParseException("Failed to parse OpenAPI spec at " + specFile + ": " + errors);
+			String errors = String.join(", ", messages);
+
+            throw new ParseException("Failed to parse OpenAPI spec at " + specFile + ": " + errors);
 		}
 
 		if (messages != null && !messages.isEmpty()) {

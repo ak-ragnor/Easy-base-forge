@@ -77,7 +77,11 @@ public class ResourceExtractor {
 		ApiRequestBody requestBody = mapRequestBody(operation);
 		Map<Integer, ApiResponse> responses = mapResponses(operation.getResponses(), operation.getOperationId());
 		boolean paginated = paginationDetector.isPaginated(operation);
-		List<String> tags = operation.getTags() != null ? operation.getTags() : List.of();
+		List<String> tags = List.of();
+
+		if (operation.getTags() != null) {
+			tags = operation.getTags();
+		}
 
 		return new ApiEndpoint(
 				operationId,
@@ -123,13 +127,13 @@ public class ResourceExtractor {
 		}
 
 		Map.Entry<String, MediaType> first = content.entrySet().iterator().next();
+		ApiSchema schema = ApiSchema.voidSchema();
 
-		String contentType = first.getKey();
-		ApiSchema schema = first.getValue().getSchema() != null
-				? schemaResolver.resolve(first.getValue().getSchema(), deriveRequestBodyHint(operation))
-				: ApiSchema.voidSchema();
+		if (first.getValue().getSchema() != null) {
+			schema = schemaResolver.resolve(first.getValue().getSchema(), deriveRequestBodyHint(operation));
+		}
 
-		return new ApiRequestBody(Boolean.TRUE.equals(rb.getRequired()), contentType, schema);
+		return new ApiRequestBody(Boolean.TRUE.equals(rb.getRequired()), first.getKey(), schema);
 	}
 
 	private Map<Integer, ApiResponse> mapResponses(ApiResponses apiResponses, String operationId) {

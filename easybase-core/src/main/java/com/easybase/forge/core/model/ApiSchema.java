@@ -12,10 +12,6 @@ public record ApiSchema(String javaType, boolean isArray, boolean isPrimitive, b
 		return new ApiSchema(javaType, false, false, false);
 	}
 
-	public static ApiSchema ofPrimitive(String javaType) {
-		return new ApiSchema(javaType, false, true, false);
-	}
-
 	public static ApiSchema ofArray(String elementType) {
 		return new ApiSchema("List<" + elementType + ">", true, false, false);
 	}

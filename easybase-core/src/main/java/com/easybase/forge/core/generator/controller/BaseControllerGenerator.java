@@ -106,9 +106,11 @@ public class BaseControllerGenerator implements ArtifactGenerator {
 				.addAnnotation(mappingAnnotation(endpoint.httpMethod(), endpoint.path()));
 
 		if (wrapper != null && wrapper.isEnabled()) {
-			int statusCode = endpoint.primaryResponse() != null
-					? endpoint.primaryResponse().statusCode()
-					: 200;
+			int statusCode = 200;
+
+			if (endpoint.primaryResponse() != null) {
+				statusCode = endpoint.primaryResponse().statusCode();
+			}
 
 			if (statusCode == 201) {
 				mb.addAnnotation(AnnotationSpec.builder(RESPONSE_STATUS)
