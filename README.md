@@ -4,8 +4,6 @@
 
 Easy Base Forge generates production-ready Spring Boot boilerplate from your API specifications — keeping your business logic untouched while the framework evolves around it.
 
----
-
 ## Modules
 
 | Module | Status | Description |
@@ -13,11 +11,9 @@ Easy Base Forge generates production-ready Spring Boot boilerplate from your API
 | [REST Builder](RESTBUILDER.md) | ✅ Available | Controllers, delegates, and DTOs generated from OpenAPI specs |
 | Service Builder | 🔜 Planned | Service layer scaffolding |
 
----
+## REST Builder
 
-## REST Builder — Quick Start
-
-Generate a complete Spring Boot REST layer in three steps.
+[REST Builder documentation](RESTBUILDER.md). Generate a complete Spring Boot REST layer in three steps.
 
 **1. Add the Maven plugin**
 
@@ -49,10 +45,6 @@ basePackage: com.example.api
 mvn generate-sources
 ```
 
-→ [Full REST Builder documentation](RESTBUILDER.md)
-
----
-
 ## Build from Source
 
 ```bash
@@ -68,21 +60,6 @@ mvn package -pl easybase-cli -am -DskipTests
 # Run the CLI
 java -jar easybase-cli/target/easybase-cli-*.jar generate api.yaml
 ```
-
----
-
-## Project Structure
-
-```
-easy-base-forge/
-├── easybase-core/            Core engine, generators, parser, config
-├── easybase-maven-plugin/    Maven plugin (generate-sources phase)
-├── easybase-gradle-plugin/   Gradle plugin (easybaseGenerate task)
-├── easybase-cli/             Standalone CLI with native-image support
-└── easybase-test-fixtures/   Shared test utilities and sample specs
-```
-
----
 
 ## License
 
