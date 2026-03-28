@@ -249,7 +249,7 @@ public class SchemaResolver {
 					case "date-time" -> "OffsetDateTime";
 					case "uuid" -> "UUID";
 					case "binary", "byte" -> "byte[]";
-                    default -> "String";
+					default -> "String";
 				};
 			}
 			case "integer" -> {

@@ -30,7 +30,7 @@ public class OpenApiLoader {
 		if (result.getOpenAPI() == null) {
 			String errors = String.join(", ", messages);
 
-            throw new ParseException("Failed to parse OpenAPI spec at " + specFile + ": " + errors);
+			throw new ParseException("Failed to parse OpenAPI spec at " + specFile + ": " + errors);
 		}
 
 		if (messages != null && !messages.isEmpty()) {

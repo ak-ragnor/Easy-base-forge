@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import com.easybase.forge.core.config.GeneratorConfig;
-import com.easybase.forge.core.model.ApiResource;
 import com.easybase.forge.core.model.ApiSpec;
 import com.easybase.forge.core.parser.*;
 import com.easybase.forge.core.writer.ArtifactWriter;

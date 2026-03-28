@@ -102,7 +102,7 @@ public class GenerateOptions {
 	}
 
 	public void setResponseWrapper(ResponseWrapperConfig responseWrapper) {
-        this.responseWrapper = Objects.requireNonNullElseGet(responseWrapper, ResponseWrapperConfig::new);
+		this.responseWrapper = Objects.requireNonNullElseGet(responseWrapper, ResponseWrapperConfig::new);
 	}
 
 	public String getCrossOrigin() {
