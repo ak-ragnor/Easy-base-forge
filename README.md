@@ -1,38 +1,25 @@
-# EasyBase REST Builder
+# Easy Base Forge
 
-**OpenAPI-first code generation for Spring Boot REST layers.**
+**Code generation toolkit for Spring Boot applications.**
 
-Give EasyBase an OpenAPI spec and a minimal config — it generates controllers, delegates, and DTOs while keeping your business logic completely untouched.
-
----
-
-## ✨ Why EasyBase?
-
-- **Spec-driven** — OpenAPI is the single source of truth
-- **Safe regeneration** — your custom code is never overwritten
-- **Clean architecture** — strict separation between generated and custom layers
-- **Zero boilerplate** — focus only on business logic
+Easy Base Forge generates production-ready Spring Boot boilerplate from your API specifications — keeping your business logic untouched while the framework evolves around it.
 
 ---
 
-## 📦 What Gets Generated
+## Modules
 
-For each resource (**tag**) in your OpenAPI spec:
-
-| File | Overwritten | Purpose |
-|------|------------|--------|
-| `{Resource}ControllerBase.java` | ✅ Always | Abstract controller wired to delegate |
-| `{Resource}ApiDelegate.java` | ✅ Always | Interface defining all endpoints |
-| `DTOs & Requests` | ✅ Always | Lombok DTOs with validation |
-| `{Resource}Controller.java` | ❌ Never | Your extension layer (safe zone) |
-
-> Regeneration updates only generated files — your custom code remains untouched.
+| Module | Status | Description |
+|--------|--------|-------------|
+| [REST Builder](RESTBUILDER.md) | ✅ Available | Controllers, delegates, and DTOs generated from OpenAPI specs |
+| Service Builder | 🔜 Planned | Service layer scaffolding |
 
 ---
 
-## 🚀 Quick Start
+## REST Builder — Quick Start
 
-### 1. Add Maven Plugin
+Generate a complete Spring Boot REST layer in three steps.
+
+**1. Add the Maven plugin**
 
 ```xml
 <plugin>
@@ -44,280 +31,59 @@ For each resource (**tag**) in your OpenAPI spec:
     </configuration>
     <executions>
         <execution>
-            <goals>
-                <goal>generate</goal>
-            </goals>
+            <goals><goal>generate</goal></goals>
         </execution>
     </executions>
 </plugin>
 ```
 
----
-
-### 2. Create Config
+**2. Create `easybase-config.yaml`**
 
 ```yaml
 basePackage: com.example.api
 ```
 
----
-
-### 3. Generate Code
+**3. Generate**
 
 ```bash
 mvn generate-sources
 ```
 
-Generated sources appear in:
-
-```
-target/generated-sources/easybase/
-```
+→ [Full REST Builder documentation](RESTBUILDER.md)
 
 ---
 
-## ⚙️ Configuration
-
-### Minimal
-
-```yaml
-basePackage: com.example.api
-```
-
----
-
-### Full Example
-
-```yaml
-basePackage: com.example.api
-
-output:
-  directory: target/generated-sources/easybase
-  layout: MULTI_MODULE
-
-structure:
-  controller:
-    package:     "{basePackage}.{resource}.controller"
-    basePackage: "{basePackage}.{resource}.controller.base"
-  delegate:
-    package: "{basePackage}.{resource}.delegate"
-  dto:
-    package: "{basePackage}.{resource}.dto"
-
-generate:
-  delegateImpl: false
-  responseEntityWrapping: ALWAYS
-  beanValidation: true
-  pagination: NONE
-```
-
----
-
-## 🧩 Configuration Breakdown
-
-### Output Layout
-
-| Option | Description |
-|------|-------------|
-| `MULTI_MODULE` | Each resource gets its own package |
-| `FLAT` | All resources share common packages |
-
-> FLAT mode detects DTO name collisions before generation.
-
----
-
-### Response Wrapping
-
-| Mode | Behavior |
-|------|--------|
-| `ALWAYS` | `ResponseEntity<T>` |
-| `NEVER` | Plain return types |
-| `VOID_ONLY` | Wrap only void responses |
-
----
-
-### Pagination
-
-```yaml
-generate:
-  pagination: SPRING_DATA
-```
-
-Enables:
-
-- `Pageable` injection
-- `Page<T>` return types
-
-Trigger via:
-
-```yaml
-x-easybase-paginated: true
-```
-
----
-
-## 🖥 CLI Usage
+## Build from Source
 
 ```bash
-java -jar easybase-cli.jar generate api.yaml
-```
+git clone https://github.com/ak-ragnor/Easy-base-forge.git
+cd Easy-base-forge
 
-### Options
-
-```
--c, --config     Config file (default: ./easybase-config.yaml)
--o, --output     Output directory
---dry-run        Preview without writing files
--h               Help
--V               Version
-```
-
----
-
-### Examples
-
-```bash
-# Default usage
-java -jar easybase-cli.jar generate api.yaml
-
-# Custom config
-java -jar easybase-cli.jar generate api.yaml \
-  --config my-config.yaml \
-  --output src/main/java
-
-# Preview only
-java -jar easybase-cli.jar generate api.yaml --dry-run
-```
-
----
-
-## ⚡ Native Binary (GraalVM)
-
-```bash
-mvn package -pl easybase-cli -am -Pnative -DskipTests
-
-./easybase-cli/target/easybase generate api.yaml
-```
-
----
-
-## 🏗 Generated Structure
-
-```
-com/example/api/
-└── pets/
-    ├── controller/
-    │   ├── base/
-    │   │   └── PetsControllerBase.java
-    │   └── PetsController.java
-    ├── delegate/
-    │   └── PetsApiDelegate.java
-    └── dto/
-        ├── PetDTO.java
-        ├── CreatePetRequest.java
-        └── UpdatePetRequest.java
-```
-
----
-
-## 🧠 Generated Code Overview
-
-### Delegate Interface
-
-```java
-public interface PetsApiDelegate {
-    ResponseEntity<List<PetDTO>> listPets(String status, Integer page, Integer size);
-    ResponseEntity<PetDTO> createPet(CreatePetRequest request);
-}
-```
-
----
-
-### Base Controller
-
-```java
-@RestController
-public abstract class PetsControllerBase {
-
-    private final PetsApiDelegate delegate;
-
-    protected PetsControllerBase(PetsApiDelegate delegate) {
-        this.delegate = delegate;
-    }
-
-    @GetMapping("/pets")
-    public ResponseEntity<List<PetDTO>> listPets(...) {
-        return ResponseEntity.ok(delegate.listPets(...));
-    }
-}
-```
-
----
-
-### Custom Controller (Safe Zone)
-
-```java
-@RestController
-public class PetsController extends PetsControllerBase {
-
-    public PetsController(PetsApiDelegate delegate) {
-        super(delegate);
-    }
-}
-```
-
----
-
-### Business Logic
-
-```java
-@Service
-@RequiredArgsConstructor
-public class PetsService implements PetsApiDelegate {
-
-    private final PetRepository repository;
-
-    @Override
-    public ResponseEntity<List<PetDTO>> listPets(...) {
-        // your logic
-    }
-}
-```
-
----
-
-## 🔍 OpenAPI Support
-
-| Feature | Behavior |
-|--------|--------|
-| `$ref` | Generates DTO classes |
-| `allOf` | Merges schemas |
-| `oneOf` + discriminator | Polymorphic models |
-| `nullable` | `@Nullable` |
-| Validation | `@NotNull`, `@Size`, etc. |
-| Formats | `UUID`, `LocalDate`, etc. |
-| Pagination | Spring Data support |
-
----
-
-## 🛠 Build from Source
-
-```bash
-git clone https://github.com/easybase/easy-base-forge.git
-cd easy-base-forge
-
+# Build and test all modules
 mvn verify
 
+# Build fat JAR for CLI use
 mvn package -pl easybase-cli -am -DskipTests
 
+# Run the CLI
 java -jar easybase-cli/target/easybase-cli-*.jar generate api.yaml
 ```
 
 ---
 
-## 💡 Design Philosophy
+## Project Structure
 
-- **Generated code is disposable**
-- **Custom code is permanent**
-- **OpenAPI is the contract**
-- **Separation of concerns is enforced by design**
+```
+easy-base-forge/
+├── easybase-core/            Core engine, generators, parser, config
+├── easybase-maven-plugin/    Maven plugin (generate-sources phase)
+├── easybase-gradle-plugin/   Gradle plugin (easybaseGenerate task)
+├── easybase-cli/             Standalone CLI with native-image support
+└── easybase-test-fixtures/   Shared test utilities and sample specs
+```
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE)
