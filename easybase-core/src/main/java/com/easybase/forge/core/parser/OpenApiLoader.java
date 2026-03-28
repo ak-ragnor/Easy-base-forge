@@ -1,12 +1,13 @@
 package com.easybase.forge.core.parser;
 
+import java.nio.file.Path;
+import java.util.List;
+import java.util.logging.Logger;
+
+import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.ParseOptions;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
-import io.swagger.v3.oas.models.OpenAPI;
-
-import java.nio.file.Path;
-import java.util.List;
 
 /**
  * Loads and validates an OpenAPI 3.x document.
@@ -14,25 +15,28 @@ import java.util.List;
  */
 public class OpenApiLoader {
 
-    public OpenAPI load(Path specFile) {
-        ParseOptions options = new ParseOptions();
-        // resolve(true) follows external $refs; do NOT set resolveFully(true) because that
-        // inlines all $ref content, erasing schema names and causing duplicate anonymous DTOs.
-        options.setResolve(true);
+	private static final Logger LOG = Logger.getLogger(OpenApiLoader.class.getName());
 
-        SwaggerParseResult result = new OpenAPIV3Parser()
-                .readLocation(specFile.toAbsolutePath().toString(), null, options);
+	public OpenAPI load(Path specFile) {
+		ParseOptions options = new ParseOptions();
 
-        List<String> messages = result.getMessages();
-        if (result.getOpenAPI() == null) {
-            String errors = messages == null ? "(no details)" : String.join(", ", messages);
-            throw new ParseException("Failed to parse OpenAPI spec at " + specFile + ": " + errors);
-        }
+		options.setResolve(true);
 
-        if (messages != null && !messages.isEmpty()) {
-            messages.forEach(msg -> System.err.println("[WARN] OpenAPI: " + msg));
-        }
+		SwaggerParseResult result =
+				new OpenAPIV3Parser().readLocation(specFile.toAbsolutePath().toString(), null, options);
 
-        return result.getOpenAPI();
-    }
+		List<String> messages = result.getMessages();
+
+		if (result.getOpenAPI() == null) {
+			String errors = String.join(", ", messages);
+
+			throw new ParseException("Failed to parse OpenAPI spec at " + specFile + ": " + errors);
+		}
+
+		if (messages != null && !messages.isEmpty()) {
+			messages.forEach(msg -> LOG.warning("[WARN] OpenAPI: " + msg));
+		}
+
+		return result.getOpenAPI();
+	}
 }

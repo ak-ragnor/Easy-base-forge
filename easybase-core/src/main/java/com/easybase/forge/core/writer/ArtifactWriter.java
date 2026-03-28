@@ -12,31 +12,31 @@ import java.util.List;
  */
 public class ArtifactWriter {
 
-    public GenerationReport write(List<GenerationUnit> units) {
-        GenerationReport.Builder report = GenerationReport.builder();
+	public GenerationReport write(List<GenerationUnit> units) {
+		GenerationReport.Builder report = GenerationReport.builder();
 
-        for (GenerationUnit unit : units) {
-            boolean exists = Files.exists(unit.outputPath());
+		for (GenerationUnit unit : units) {
+			boolean exists = Files.exists(unit.outputPath());
 
-            if (!unit.overwrite() && exists) {
-                report.skipped(unit.outputPath().toString());
-                continue;
-            }
+			if (!unit.overwrite() && exists) {
+				report.skipped(unit.outputPath().toString());
+				continue;
+			}
 
-            try {
-                Files.createDirectories(unit.outputPath().getParent());
-                Files.writeString(unit.outputPath(), unit.content(), StandardCharsets.UTF_8);
+			try {
+				Files.createDirectories(unit.outputPath().getParent());
+				Files.writeString(unit.outputPath(), unit.content(), StandardCharsets.UTF_8);
 
-                if (exists) {
-                    report.updated(unit.outputPath().toString());
-                } else {
-                    report.created(unit.outputPath().toString());
-                }
-            } catch (IOException e) {
-                report.error("Failed to write " + unit.outputPath() + ": " + e.getMessage());
-            }
-        }
+				if (exists) {
+					report.updated(unit.outputPath().toString());
+				} else {
+					report.created(unit.outputPath().toString());
+				}
+			} catch (IOException e) {
+				report.error("Failed to write " + unit.outputPath() + ": " + e.getMessage());
+			}
+		}
 
-        return report.build();
-    }
+		return report.build();
+	}
 }

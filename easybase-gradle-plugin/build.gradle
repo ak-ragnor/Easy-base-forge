@@ -1,0 +1,30 @@
+plugins {
+    id 'java-gradle-plugin'
+    id 'maven-publish'
+}
+
+group = 'com.easybase'
+version = '0.1.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    implementation 'com.easybase:easybase-core:0.1.0-SNAPSHOT'
+}
+
+gradlePlugin {
+    plugins {
+        easybasePlugin {
+            id = 'com.easybase.forge'
+            implementationClass = 'com.easybase.forge.gradle.EasyBasePlugin'
+        }
+    }
+}

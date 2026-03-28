@@ -1,11 +1,11 @@
 package com.easybase.forge.core.parser;
 
-import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.parameters.Parameter;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.parameters.Parameter;
 
 /**
  * Determines whether an operation should be treated as paginated.
@@ -18,27 +18,29 @@ import java.util.Set;
  */
 public class PaginationDetector {
 
-    private static final Set<String> PAGE_PARAMS = Set.of("page", "size", "pageable", "pageNumber", "pageSize");
+	private static final Set<String> PAGE_PARAMS = Set.of("page", "size", "pageable", "pageNumber", "pageSize");
 
-    public boolean isPaginated(Operation operation) {
-        if (operation == null) return false;
+	public boolean isPaginated(Operation operation) {
+		if (operation == null) return false;
 
-        // Check explicit extension
-        Map<String, Object> extensions = operation.getExtensions();
-        if (extensions != null) {
-            Object flag = extensions.get("x-easybase-paginated");
-            if (Boolean.TRUE.equals(flag) || "true".equals(flag)) {
-                return true;
-            }
-        }
+		Map<String, Object> extensions = operation.getExtensions();
 
-        // Fall back to parameter-name heuristic
-        List<Parameter> parameters = operation.getParameters();
-        if (parameters == null) return false;
+		if (extensions != null) {
+			Object flag = extensions.get("x-easybase-paginated");
+			if (Boolean.TRUE.equals(flag) || "true".equals(flag)) {
+				return true;
+			}
+		}
 
-        return parameters.stream()
-                .filter(p -> "query".equals(p.getIn()))
-                .map(Parameter::getName)
-                .anyMatch(PAGE_PARAMS::contains);
-    }
+		List<Parameter> parameters = operation.getParameters();
+
+		if (parameters == null) {
+			return false;
+		}
+
+		return parameters.stream()
+				.filter(p -> "query".equals(p.getIn()))
+				.map(Parameter::getName)
+				.anyMatch(PAGE_PARAMS::contains);
+	}
 }

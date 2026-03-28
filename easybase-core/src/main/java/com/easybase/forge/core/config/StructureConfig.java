@@ -7,57 +7,55 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class StructureConfig {
 
-    private ControllerStructureConfig controller = new ControllerStructureConfig();
+	private ControllerStructureConfig controller = new ControllerStructureConfig();
 
-    @JsonProperty("delegate")
-    private PackageConfig delegate = new PackageConfig("{basePackage}.{resource}.delegate");
+	@JsonProperty("delegate")
+	private PackageConfig delegate = new PackageConfig("{basePackage}.{resource}.delegate");
 
-    @JsonProperty("dto")
-    private PackageConfig dto = new PackageConfig("{basePackage}.{resource}.dto");
+	@JsonProperty("dto")
+	private PackageConfig dto = new PackageConfig("{basePackage}.{resource}.dto");
 
-    public ControllerStructureConfig getController() {
-        return controller;
-    }
+	public ControllerStructureConfig getController() {
+		return controller;
+	}
 
-    public void setController(ControllerStructureConfig controller) {
-        this.controller = controller;
-    }
+	public void setController(ControllerStructureConfig controller) {
+		this.controller = controller;
+	}
 
-    public PackageConfig getDelegate() {
-        return delegate;
-    }
+	public PackageConfig getDelegate() {
+		return delegate;
+	}
 
-    public void setDelegate(PackageConfig delegate) {
-        this.delegate = delegate;
-    }
+	public void setDelegate(PackageConfig delegate) {
+		this.delegate = delegate;
+	}
 
-    public PackageConfig getDto() {
-        return dto;
-    }
+	public PackageConfig getDto() {
+		return dto;
+	}
 
-    public void setDto(PackageConfig dto) {
-        this.dto = dto;
-    }
+	public void setDto(PackageConfig dto) {
+		this.dto = dto;
+	}
 
-    /** Simple wrapper for a single {@code package} string entry. */
-    public static class PackageConfig {
+	public static class PackageConfig {
 
-        @JsonProperty("package")
-        private String pkg;
+		@JsonProperty("package")
+		private String pkg;
 
-        public PackageConfig() {
-        }
+		public PackageConfig() {}
 
-        public PackageConfig(String pkg) {
-            this.pkg = pkg;
-        }
+		public PackageConfig(String pkg) {
+			this.pkg = pkg;
+		}
 
-        public String getPkg() {
-            return pkg;
-        }
+		public String getPkg() {
+			return pkg;
+		}
 
-        public void setPkg(String pkg) {
-            this.pkg = pkg;
-        }
-    }
+		public void setPkg(String pkg) {
+			this.pkg = pkg;
+		}
+	}
 }

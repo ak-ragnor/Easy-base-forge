@@ -1,80 +1,77 @@
 package com.easybase.forge.core.generator;
 
-import com.easybase.forge.core.config.*;
-import com.easybase.forge.core.engine.GeneratorEngine;
-import com.easybase.forge.core.writer.GenerationReport;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import com.easybase.forge.core.config.*;
+import com.easybase.forge.core.engine.GeneratorEngine;
 
 /**
  * Verifies that nullable: true OpenAPI fields get @Nullable in generated DTOs.
  */
 class NullableFieldTest {
 
-    @TempDir
-    Path outputDir;
+	@TempDir
+	Path outputDir;
 
-    private GeneratorEngine engine() {
-        GeneratorConfig config = new GeneratorConfig();
-        config.setBasePackage("com.example.api");
+	private GeneratorEngine engine() {
+		GeneratorConfig config = new GeneratorConfig();
+		config.setBasePackage("com.example.api");
 
-        OutputConfig output = new OutputConfig();
-        output.setLayout(LayoutMode.MULTI_MODULE);
-        config.setOutput(output);
+		OutputConfig output = new OutputConfig();
+		output.setLayout(LayoutMode.MULTI_MODULE);
+		config.setOutput(output);
 
-        config.withOutputDirectory(outputDir);
-        return new GeneratorEngine(config);
-    }
+		config.withOutputDirectory(outputDir);
+		return new GeneratorEngine(config);
+	}
 
-    private Path specPath() throws Exception {
-        URL url = getClass().getResource("/specs/animals.yaml");
-        assertThat(url).as("animals.yaml not found").isNotNull();
-        return Paths.get(url.toURI());
-    }
+	private Path specPath() throws Exception {
+		URL url = getClass().getResource("/specs/animals.yaml");
 
-    @Test
-    void nullableField_getsNullableAnnotation() throws Exception {
-        engine().generate(specPath());
+		assertThat(url).as("animals.yaml not found").isNotNull();
 
-        // Cat.indoor and Dog.breed are nullable: true in the spec
-        Path catFile = outputDir.resolve("com/example/api/animals/dto/Cat.java");
-        assertThat(catFile).exists();
+		return Paths.get(url.toURI());
+	}
 
-        String catContent = Files.readString(catFile);
-        // @Nullable should appear before the indoor field
-        assertThat(catContent).contains("@Nullable");
-        assertThat(catContent).containsPattern("@Nullable[\\s\\S]*?indoor");
-    }
+	@Test
+	void nullableField_getsNullableAnnotation() throws Exception {
+		engine().generate(specPath());
 
-    @Test
-    void nonNullableField_noNullableAnnotation() throws Exception {
-        engine().generate(specPath());
+		Path catFile = outputDir.resolve("com/example/api/animals/dto/Cat.java");
+		assertThat(catFile).exists();
 
-        // Cat.name is required (not nullable) — should not have @Nullable
-        Path catFile = outputDir.resolve("com/example/api/animals/dto/Cat.java");
-        String catContent = Files.readString(catFile);
+		String catContent = Files.readString(catFile);
 
-        // Verify @Nullable is present at least once (for indoor)
-        assertThat(catContent).contains("@Nullable");
+		assertThat(catContent).contains("@Nullable");
+		assertThat(catContent).containsPattern("@Nullable[\\s\\S]*?indoor");
+	}
 
-        // Verify 'name' field does NOT have @Nullable directly before it
-        // (The pattern @Nullable\n  private String name should not appear)
-        assertThat(catContent).doesNotContainPattern("@Nullable[\\s\\S]{0,30}private String name");
-    }
+	@Test
+	void nonNullableField_noNullableAnnotation() throws Exception {
+		engine().generate(specPath());
 
-    @Test
-    void nullableImportPresent() throws Exception {
-        engine().generate(specPath());
+		Path catFile = outputDir.resolve("com/example/api/animals/dto/Cat.java");
+		String catContent = Files.readString(catFile);
 
-        Path catFile = outputDir.resolve("com/example/api/animals/dto/Cat.java");
-        String content = Files.readString(catFile);
-        assertThat(content).contains("import org.springframework.lang.Nullable");
-    }
+		assertThat(catContent).contains("@Nullable");
+		assertThat(catContent).doesNotContainPattern("@Nullable[\\s\\S]{0,30}private String name");
+	}
+
+	@Test
+	void nullableImportPresent() throws Exception {
+		engine().generate(specPath());
+
+		Path catFile = outputDir.resolve("com/example/api/animals/dto/Cat.java");
+		String content = Files.readString(catFile);
+
+		assertThat(content).contains("import org.springframework.lang.Nullable");
+	}
 }

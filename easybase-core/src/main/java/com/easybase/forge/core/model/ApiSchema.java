@@ -7,27 +7,16 @@ package com.easybase.forge.core.model;
  * primitives have been mapped to Java types, and collection wrappers applied.
  * Generators must never access the raw OpenAPI model again once they hold an ApiSchema.
  */
-public record ApiSchema(
-        /** Fully-qualified or simple Java type name, e.g. {@code String}, {@code List<PetDTO>}, {@code UUID}. */
-        String javaType,
-        boolean isArray,
-        boolean isPrimitive,
-        /** True when the OpenAPI schema had {@code nullable: true}. */
-        boolean nullable
-) {
-    public static ApiSchema of(String javaType) {
-        return new ApiSchema(javaType, false, false, false);
-    }
+public record ApiSchema(String javaType, boolean isArray, boolean isPrimitive, boolean nullable) {
+	public static ApiSchema of(String javaType) {
+		return new ApiSchema(javaType, false, false, false);
+	}
 
-    public static ApiSchema ofPrimitive(String javaType) {
-        return new ApiSchema(javaType, false, true, false);
-    }
+	public static ApiSchema ofArray(String elementType) {
+		return new ApiSchema("List<" + elementType + ">", true, false, false);
+	}
 
-    public static ApiSchema ofArray(String elementType) {
-        return new ApiSchema("List<" + elementType + ">", true, false, false);
-    }
-
-    public static ApiSchema voidSchema() {
-        return new ApiSchema("Void", false, false, false);
-    }
+	public static ApiSchema voidSchema() {
+		return new ApiSchema("Void", false, false, false);
+	}
 }

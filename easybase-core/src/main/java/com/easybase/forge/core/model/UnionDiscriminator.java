@@ -9,14 +9,9 @@ import java.util.List;
  * The concrete variant schemas have their {@link DtoSchema#parentClass()} set to this
  * base class name.
  */
-public record UnionDiscriminator(
-        /** The JSON property name that carries the type discriminator (e.g. {@code "type"}). */
-        String propertyName,
-        /** Ordered list of discriminator-value → concrete class name mappings. */
-        List<SubtypeMapping> subtypes
-) {
-    /**
-     * Maps one discriminator value (the string that appears in JSON) to a concrete DTO class name.
-     */
-    public record SubtypeMapping(String discriminatorValue, String className) {}
+public record UnionDiscriminator(String propertyName, List<SubtypeMapping> subtypes) {
+	/**
+	 * Maps one discriminator value (the string that appears in JSON) to a concrete DTO class name.
+	 */
+	public record SubtypeMapping(String discriminatorValue, String className) {}
 }

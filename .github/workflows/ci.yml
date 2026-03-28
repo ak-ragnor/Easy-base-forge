@@ -59,7 +59,7 @@ jobs:
 
       - name: Build native image
         run: |
-          mvn package -pl easybase-cli --batch-mode --no-transfer-progress \
+          mvn package -pl easybase-cli -am --batch-mode --no-transfer-progress \
             -DskipTests -Pnative
 
       - name: Smoke test — easybase --help

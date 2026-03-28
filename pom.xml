@@ -71,6 +71,10 @@
         <maven-plugin-api.version>3.9.8</maven-plugin-api.version>
         <maven-plugin-annotations.version>3.13.1</maven-plugin-annotations.version>
 
+        <!-- Code formatting -->
+        <spotless.version>2.43.0</spotless.version>
+        <palantir-java-format.version>2.38.0</palantir-java-format.version>
+
         <!-- Build plugins -->
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.3.1</maven-surefire-plugin.version>
@@ -236,6 +240,56 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+
+        <plugins>
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.version}</version>
+
+                <configuration>
+                    <java>
+                        <palantirJavaFormat>
+                            <version>${palantir-java-format.version}</version>
+                        </palantirJavaFormat>
+
+                        <importOrder>
+                            <order>java,javax,org,com,</order>
+                        </importOrder>
+
+                        <removeUnusedImports/>
+                        <toggleOffOn/>
+                        <formatAnnotations/>
+                        <trimTrailingWhitespace/>
+                        <indent>
+                            <tabs>true</tabs>
+                            <spacesPerTab>4</spacesPerTab>
+                        </indent>
+                        <endWithNewline/>
+                    </java>
+                </configuration>
+
+                <executions>
+                    <!-- Auto format -->
+                    <execution>
+                        <id>spotless-apply</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>apply</goal>
+                        </goals>
+                    </execution>
+
+                    <!-- Verify -->
+                    <execution>
+                        <id>spotless-check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 
     <!-- ======================================================================

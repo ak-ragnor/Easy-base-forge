@@ -1,14 +1,15 @@
 package com.easybase.forge.core.parser;
 
+import java.util.*;
+import java.util.stream.Collectors;
+
 import com.easybase.forge.core.model.*;
+
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.ComposedSchema;
 import io.swagger.v3.oas.models.media.Discriminator;
 import io.swagger.v3.oas.models.media.Schema;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Resolves OpenAPI {@link Schema} objects into Java type strings and {@link DtoSchema} definitions.
@@ -30,338 +31,399 @@ import java.util.stream.Collectors;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class SchemaResolver {
 
-    private final OpenAPI openApi;
-    private final ValidationMapper validationMapper;
-    /** Global DTO registry — all named schemas from components and any inline objects. */
-    private final Map<String, DtoSchema> dtoRegistry = new LinkedHashMap<>();
-    /** Tracks which schemas were referenced during the current resource's endpoint processing. */
-    private final Set<String> sessionReferenced = new LinkedHashSet<>();
+	private final OpenAPI openApi;
+	private final ValidationMapper validationMapper;
+	/** Global DTO registry — all named schemas from components and any inline objects. */
+	private final Map<String, DtoSchema> dtoRegistry = new LinkedHashMap<>();
+	/** Tracks which schemas were referenced during the current resource's endpoint processing. */
+	private final Set<String> sessionReferenced = new LinkedHashSet<>();
 
-    public SchemaResolver(OpenAPI openApi, ValidationMapper validationMapper) {
-        this.openApi = openApi;
-        this.validationMapper = validationMapper;
-    }
+	public SchemaResolver(OpenAPI openApi, ValidationMapper validationMapper) {
+		this.openApi = openApi;
+		this.validationMapper = validationMapper;
+	}
 
-    /**
-     * Resolves the given schema to an {@link ApiSchema} containing the Java type string.
-     *
-     * @param schema    the OpenAPI schema (may be null)
-     * @param hintName  a name hint used when generating a class name for inline objects
-     * @return resolved ApiSchema; never null
-     */
-    public ApiSchema resolve(Schema schema, String hintName) {
-        if (schema == null) {
-            return ApiSchema.voidSchema();
-        }
+	/**
+	 * Resolves the given schema to an {@link ApiSchema} containing the Java type string.
+	 *
+	 * @param schema    the OpenAPI schema (may be null)
+	 * @param hintName  a name hint used when generating a class name for inline objects
+	 * @return resolved ApiSchema; never null
+	 */
+	public ApiSchema resolve(Schema schema, String hintName) {
+		if (schema == null) {
+			return ApiSchema.voidSchema();
+		}
 
-        // $ref — extract component name and resolve
-        if (schema.get$ref() != null) {
-            String refName = extractRefName(schema.get$ref());
-            Schema resolved = resolveRef(refName);
+		if (schema.get$ref() != null) {
+			String refName = extractRefName(schema.get$ref());
+			Schema resolved = resolveRef(refName);
 
-            if (resolved instanceof ComposedSchema composedResolved) {
-                // $ref pointing at a oneOf/anyOf/allOf — resolve through composition.
-                // The returned type may differ from refName (e.g. "AnimalBase" for discriminated oneOf).
-                return resolveComposed(composedResolved, refName);
-            }
+			if (resolved instanceof ComposedSchema composedResolved) {
 
-            if (resolved != null) {
-                ensureDtoRegistered(refName, resolved);
-            }
-            ensureTransitivesTracked(refName);
-            return ApiSchema.of(refName);
-        }
+				return resolveComposed(composedResolved, refName);
+			}
 
-        // Inline allOf / oneOf / anyOf
-        if (schema instanceof ComposedSchema composed) {
-            return resolveComposed(composed, hintName);
-        }
+			if (resolved != null) {
+				ensureDtoRegistered(refName, resolved);
+			}
+			ensureTransitivesTracked(refName);
+			return ApiSchema.of(refName);
+		}
 
-        // Array
-        if (schema instanceof ArraySchema || "array".equals(schema.getType())) {
-            Schema items = schema.getItems();
-            ApiSchema itemSchema = resolve(items, hintName + "Item");
-            return ApiSchema.ofArray(itemSchema.javaType());
-        }
+		if (schema instanceof ComposedSchema composed) {
+			return resolveComposed(composed, hintName);
+		}
 
-        // Object (inline) — generate a class name from the hint and track it
-        if ("object".equals(schema.getType()) || hasProperties(schema)) {
-            String className = toPascalCase(hintName);
-            ensureDtoRegistered(className, schema);
-            ensureTransitivesTracked(className);
-            return ApiSchema.of(className);
-        }
+		if (schema instanceof ArraySchema || "array".equals(schema.getType())) {
+			Schema items = schema.getItems();
 
-        // Primitives
-        String javaType = resolvePrimitive(schema);
-        boolean isPrimitive = !javaType.startsWith("List") && !javaType.equals("Object");
-        return new ApiSchema(javaType, false, isPrimitive, Boolean.TRUE.equals(schema.getNullable()));
-    }
+			ApiSchema itemSchema = resolve(items, hintName + "Item");
 
-    private ApiSchema resolveComposed(ComposedSchema composed, String hintName) {
-        List<Schema> allOf = composed.getAllOf();
-        if (allOf != null && !allOf.isEmpty()) {
-            return resolveAllOf(allOf, hintName);
-        }
+			return ApiSchema.ofArray(itemSchema.javaType());
+		}
 
-        List<Schema> oneOf = composed.getOneOf();
-        List<Schema> anyOf = composed.getAnyOf();
-        List<Schema> variants = oneOf != null && !oneOf.isEmpty() ? oneOf
-                : anyOf != null && !anyOf.isEmpty() ? anyOf
-                : null;
+		if ("object".equals(schema.getType()) || hasProperties(schema)) {
+			String className = toPascalCase(hintName);
 
-        if (variants != null) {
-            return resolveOneOfAnyOf(variants, composed.getDiscriminator(), hintName);
-        }
+			ensureDtoRegistered(className, schema);
+			ensureTransitivesTracked(className);
 
-        return ApiSchema.of("Object");
-    }
+			return ApiSchema.of(className);
+		}
 
-    private ApiSchema resolveAllOf(List<Schema> allOf, String hintName) {
-        String className = toPascalCase(hintName);
-        List<DtoField> mergedFields = new ArrayList<>();
-        for (Schema part : allOf) {
-            Schema actual = part.get$ref() != null ? resolveRef(extractRefName(part.get$ref())) : part;
-            if (actual != null && actual.getProperties() != null) {
-                Set<String> required = actual.getRequired() != null
-                        ? new HashSet<>(actual.getRequired()) : Set.of();
-                mergedFields.addAll(buildFields(actual, required));
-            }
-        }
-        // Use the last $ref name as the class name if available
-        String resolvedName = allOf.stream()
-                .filter(s -> s.get$ref() != null)
-                .map(s -> extractRefName(s.get$ref()))
-                .reduce((first, second) -> second)
-                .orElse(className);
-        dtoRegistry.put(resolvedName, DtoSchema.of(resolvedName, "", mergedFields));
-        sessionReferenced.add(resolvedName);
-        return ApiSchema.of(resolvedName);
-    }
+		String javaType = resolvePrimitive(schema);
 
-    /**
-     * Handles {@code oneOf} and {@code anyOf}:
-     *
-     * <ul>
-     *   <li>All {@code $ref} variants are resolved and registered as DTOs.</li>
-     *   <li>With a discriminator: an abstract base class is generated with Jackson
-     *       {@code @JsonTypeInfo} / {@code @JsonSubTypes} metadata. Each variant DTO is
-     *       patched with {@link DtoSchema#parentClass()} so the generator emits
-     *       {@code extends BaseClass}. The returned type is the base class name.</li>
-     *   <li>Without a discriminator: all variants are still registered; returned type is
-     *       {@code Object}.</li>
-     * </ul>
-     */
-    private ApiSchema resolveOneOfAnyOf(List<Schema> variants, Discriminator discriminator,
-                                        String hintName) {
-        // Register all variant schemas as DTOs and track in session
-        List<String> variantNames = new ArrayList<>();
-        for (Schema variant : variants) {
-            if (variant.get$ref() != null) {
-                String refName = extractRefName(variant.get$ref());
-                Schema resolved = resolveRef(refName);
-                if (resolved != null) {
-                    ensureDtoRegistered(refName, resolved);
-                }
-                sessionReferenced.add(refName);
-                variantNames.add(refName);
-            }
-            // Inline schemas in oneOf are uncommon; skipped silently
-        }
+		boolean isPrimitive = !javaType.startsWith("List") && !javaType.equals("Object");
 
-        if (discriminator == null || discriminator.getPropertyName() == null
-                || variantNames.isEmpty()) {
-            // No discriminator — variants generated, but union type is Object
-            return ApiSchema.of("Object");
-        }
+		return new ApiSchema(javaType, false, isPrimitive, Boolean.TRUE.equals(schema.getNullable()));
+	}
 
-        // Discriminated union — build the abstract base class
-        String baseName = toPascalCase(hintName);
-        Map<String, String> explicitMapping = discriminator.getMapping() != null
-                ? discriminator.getMapping() : Map.of();
+	private ApiSchema resolveComposed(ComposedSchema composed, String hintName) {
+		List<Schema> allOf = composed.getAllOf();
 
-        List<UnionDiscriminator.SubtypeMapping> subtypes = new ArrayList<>();
-        for (String variantName : variantNames) {
-            String discValue = explicitMapping.entrySet().stream()
-                    .filter(e -> extractRefName(e.getValue()).equals(variantName))
-                    .map(Map.Entry::getKey)
-                    .findFirst()
-                    .orElse(toLowerCamelCase(variantName));
-            subtypes.add(new UnionDiscriminator.SubtypeMapping(discValue, variantName));
-        }
+		if (allOf != null && !allOf.isEmpty()) {
+			return resolveAllOf(allOf, hintName);
+		}
 
-        UnionDiscriminator union = new UnionDiscriminator(discriminator.getPropertyName(), subtypes);
-        dtoRegistry.put(baseName, new DtoSchema(baseName, "", List.of(), null, union));
-        sessionReferenced.add(baseName);
+		List<Schema> oneOf = composed.getOneOf();
+		List<Schema> anyOf = composed.getAnyOf();
 
-        // Patch each variant DTO to record its parent (enables `extends BaseClass` in generator)
-        for (String variantName : variantNames) {
-            DtoSchema existing = dtoRegistry.get(variantName);
-            if (existing != null) {
-                dtoRegistry.put(variantName, new DtoSchema(
-                        existing.className(), existing.packageName(),
-                        existing.fields(), baseName, existing.union()));
-            }
-        }
+		List<Schema> variants = null;
 
-        return ApiSchema.of(baseName);
-    }
+		if (oneOf != null && !oneOf.isEmpty()) {
+			variants = oneOf;
+		} else if (anyOf != null && !anyOf.isEmpty()) {
+			variants = anyOf;
+		}
 
-    private String resolvePrimitive(Schema schema) {
-        String type = schema.getType();
-        String format = schema.getFormat();
+		if (variants != null) {
+			return resolveOneOfAnyOf(variants, composed.getDiscriminator(), hintName);
+		}
 
-        if (type == null) return "Object";
+		return ApiSchema.of("Object");
+	}
 
-        return switch (type) {
-            case "string" -> switch (format != null ? format : "") {
-                case "date"      -> "LocalDate";
-                case "date-time" -> "OffsetDateTime";
-                case "uuid"      -> "UUID";
-                case "binary"    -> "byte[]";
-                case "byte"      -> "byte[]";
-                default          -> "String";
-            };
-            case "integer" -> "int64".equals(format) ? "Long" : "Integer";
-            case "number"  -> "float".equals(format) ? "Float" : "BigDecimal";
-            case "boolean" -> "Boolean";
-            default        -> "Object";
-        };
-    }
+	private ApiSchema resolveAllOf(List<Schema> allOf, String hintName) {
+		String className = toPascalCase(hintName);
+		List<DtoField> mergedFields = new ArrayList<>();
 
-    /**
-     * Ensures a named schema is registered as a {@link DtoSchema}.
-     *
-     * <p>If the schema is a {@link ComposedSchema} (oneOf/anyOf/allOf), delegates to
-     * {@link #resolveComposed(ComposedSchema, String)} so that variants and/or the abstract
-     * base are properly registered without creating a spurious plain DTO for the composed name.
-     */
-    public void ensureDtoRegistered(String name, Schema schema) {
-        if (dtoRegistry.containsKey(name)) return;
-        if (schema == null) return;
+		for (Schema part : allOf) {
+			Schema actual = part;
 
-        if (schema instanceof ComposedSchema composed) {
-            // Composition schemas are handled via resolveComposed; don't register the
-            // composite name itself as a plain DTO.
-            resolveComposed(composed, name);
-            return;
-        }
+			if (part.get$ref() != null) {
+				actual = resolveRef(extractRefName(part.get$ref()));
+			}
 
-        // Placeholder to prevent infinite recursion on self-referential schemas
-        dtoRegistry.put(name, DtoSchema.of(name, "", List.of()));
+			if (actual != null && actual.getProperties() != null) {
+				Set<String> required = Set.of();
 
-        Set<String> required = schema.getRequired() != null
-                ? new HashSet<>(schema.getRequired()) : Set.of();
-        List<DtoField> fields = buildFields(schema, required);
-        dtoRegistry.put(name, DtoSchema.of(name, "", fields));
-    }
+				if (actual.getRequired() != null) {
+					required = new HashSet<>(actual.getRequired());
+				}
 
-    private List<DtoField> buildFields(Schema schema, Set<String> required) {
-        List<DtoField> fields = new ArrayList<>();
-        if (schema.getProperties() == null) return fields;
+				mergedFields.addAll(buildFields(actual, required));
+			}
+		}
 
-        schema.getProperties().forEach((propName, propSchema) -> {
-            String fieldName = toLowerCamelCase((String) propName);
-            boolean isRequired = required.contains(propName);
-            ApiSchema fieldType = resolve((Schema) propSchema, toPascalCase((String) propName));
-            List<ValidationConstraint> constraints = validationMapper.map((Schema) propSchema, isRequired);
-            boolean isNullable = fieldType.nullable();
-            fields.add(new DtoField(fieldName, (String) propName, fieldType.javaType(),
-                    isRequired, constraints, isNullable));
-        });
+		String resolvedName = allOf.stream()
+				.filter(s -> s.get$ref() != null)
+				.map(s -> extractRefName(s.get$ref()))
+				.reduce((first, second) -> second)
+				.orElse(className);
 
-        return fields;
-    }
+		dtoRegistry.put(resolvedName, DtoSchema.of(resolvedName, "", mergedFields));
+		sessionReferenced.add(resolvedName);
 
-    /** Returns all DTOs in the global registry, keyed by class name. */
-    public Map<String, DtoSchema> getDtoRegistry() {
-        return Collections.unmodifiableMap(dtoRegistry);
-    }
+		return ApiSchema.of(resolvedName);
+	}
 
-    /**
-     * Returns only the DTOs referenced during the current session (since last {@link #resetSession()}).
-     */
-    public List<DtoSchema> getSessionDtos() {
-        return sessionReferenced.stream()
-                .map(dtoRegistry::get)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-    }
+	/**
+	 * Handles {@code oneOf} and {@code anyOf}:
+	 *
+	 * <ul>
+	 *   <li>All {@code $ref} variants are resolved and registered as DTOs.</li>
+	 *   <li>With a discriminator: an abstract base class is generated with Jackson
+	 *       {@code @JsonTypeInfo} / {@code @JsonSubTypes} metadata. Each variant DTO is
+	 *       patched with {@link DtoSchema#parentClass()} so the generator emits
+	 *       {@code extends BaseClass}. The returned type is the base class name.</li>
+	 *   <li>Without a discriminator: all variants are still registered; returned type is
+	 *       {@code Object}.</li>
+	 * </ul>
+	 */
+	private ApiSchema resolveOneOfAnyOf(List<Schema> variants, Discriminator discriminator, String hintName) {
+		List<String> variantNames = new ArrayList<>();
 
-    /**
-     * Adds a schema and all schemas transitively referenced through its fields to the session.
-     *
-     * <p>Uses the return value of {@link Set#add} to detect first-visit, preventing infinite
-     * recursion on self-referential schemas.
-     */
-    private void ensureTransitivesTracked(String className) {
-        if (className == null || !dtoRegistry.containsKey(className)) return;
-        if (!sessionReferenced.add(className)) return;  // Already tracked this session
+		for (Schema variant : variants) {
+			if (variant.get$ref() != null) {
+				String refName = extractRefName(variant.get$ref());
+				Schema resolved = resolveRef(refName);
+				if (resolved != null) {
+					ensureDtoRegistered(refName, resolved);
+				}
+				sessionReferenced.add(refName);
+				variantNames.add(refName);
+			}
+		}
 
-        DtoSchema dto = dtoRegistry.get(className);
-        if (dto == null) return;
-        for (DtoField field : dto.fields()) {
-            String fieldType = field.javaType();
-            // Unwrap List<X>
-            if (fieldType.startsWith("List<") && fieldType.endsWith(">")) {
-                fieldType = fieldType.substring(5, fieldType.length() - 1);
-            }
-            if (dtoRegistry.containsKey(fieldType)) {
-                ensureTransitivesTracked(fieldType);
-            }
-        }
-    }
+		if (discriminator == null || discriminator.getPropertyName() == null || variantNames.isEmpty()) {
+			return ApiSchema.of("Object");
+		}
 
-    /**
-     * Marks a schema name as referenced in the current session.
-     * Used by {@link ResourceExtractor} for types already resolved into endpoint records.
-     */
-    public void ensureSessionTracked(String className) {
-        if (className != null && dtoRegistry.containsKey(className)) {
-            ensureTransitivesTracked(className);
-        }
-    }
+		String baseName = toPascalCase(hintName);
+		Map<String, String> explicitMapping = Map.of();
 
-    /** Clears the session reference tracker. Call before processing each new resource. */
-    public void resetSession() {
-        sessionReferenced.clear();
-    }
+		if (discriminator.getMapping() != null) {
+			explicitMapping = discriminator.getMapping();
+		}
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
+		List<UnionDiscriminator.SubtypeMapping> subtypes = new ArrayList<>();
+		for (String variantName : variantNames) {
+			String discValue = explicitMapping.entrySet().stream()
+					.filter(e -> extractRefName(e.getValue()).equals(variantName))
+					.map(Map.Entry::getKey)
+					.findFirst()
+					.orElse(toLowerCamelCase(variantName));
+			subtypes.add(new UnionDiscriminator.SubtypeMapping(discValue, variantName));
+		}
 
-    private Schema resolveRef(String name) {
-        if (openApi.getComponents() == null || openApi.getComponents().getSchemas() == null) return null;
-        return openApi.getComponents().getSchemas().get(name);
-    }
+		UnionDiscriminator union = new UnionDiscriminator(discriminator.getPropertyName(), subtypes);
+		dtoRegistry.put(baseName, new DtoSchema(baseName, "", List.of(), null, union));
+		sessionReferenced.add(baseName);
 
-    private static String extractRefName(String ref) {
-        if (ref == null) return null;
-        int idx = ref.lastIndexOf('/');
-        return idx >= 0 ? ref.substring(idx + 1) : ref;
-    }
+		for (String variantName : variantNames) {
+			DtoSchema existing = dtoRegistry.get(variantName);
+			if (existing != null) {
+				dtoRegistry.put(
+						variantName,
+						new DtoSchema(
+								existing.className(),
+								existing.packageName(),
+								existing.fields(),
+								baseName,
+								existing.union()));
+			}
+		}
 
-    private static boolean hasProperties(Schema schema) {
-        return schema.getProperties() != null && !schema.getProperties().isEmpty();
-    }
+		return ApiSchema.of(baseName);
+	}
 
-    static String toPascalCase(String name) {
-        if (name == null || name.isEmpty()) return name;
-        String[] parts = name.split("[_\\-]");
-        StringBuilder sb = new StringBuilder();
-        for (String part : parts) {
-            if (!part.isEmpty()) {
-                sb.append(Character.toUpperCase(part.charAt(0)));
-                sb.append(part.length() > 1 ? part.substring(1) : "");
-            }
-        }
-        return sb.toString();
-    }
+	private String resolvePrimitive(Schema schema) {
+		String type = schema.getType();
+		String format = schema.getFormat();
 
-    static String toLowerCamelCase(String name) {
-        String pascal = toPascalCase(name);
-        if (pascal.isEmpty()) return pascal;
-        return Character.toLowerCase(pascal.charAt(0)) + pascal.substring(1);
-    }
+		if (type == null) {
+			return "Object";
+		}
+
+		return switch (type) {
+			case "string" -> {
+				String fmt = "";
+
+				if (format != null) {
+					fmt = format;
+				}
+
+				yield switch (fmt) {
+					case "date" -> "LocalDate";
+					case "date-time" -> "OffsetDateTime";
+					case "uuid" -> "UUID";
+					case "binary", "byte" -> "byte[]";
+					default -> "String";
+				};
+			}
+			case "integer" -> {
+				if ("int64".equals(format)) {
+					yield "Long";
+				}
+
+				yield "Integer";
+			}
+			case "number" -> {
+				if ("float".equals(format)) {
+					yield "Float";
+				}
+
+				yield "BigDecimal";
+			}
+			case "boolean" -> "Boolean";
+			default -> "Object";
+		};
+	}
+
+	/**
+	 * Ensures a named schema is registered as a {@link DtoSchema}.
+	 *
+	 * <p>If the schema is a {@link ComposedSchema} (oneOf/anyOf/allOf), delegates to
+	 * {@link #resolveComposed(ComposedSchema, String)} so that variants and/or the abstract
+	 * base are properly registered without creating a spurious plain DTO for the composed name.
+	 */
+	public void ensureDtoRegistered(String name, Schema schema) {
+		if (dtoRegistry.containsKey(name) || schema == null) {
+			return;
+		}
+
+		if (schema instanceof ComposedSchema composed) {
+			resolveComposed(composed, name);
+			return;
+		}
+
+		dtoRegistry.put(name, DtoSchema.of(name, "", List.of()));
+
+		Set<String> required = Set.of();
+
+		if (schema.getRequired() != null) {
+			required = new HashSet<>(schema.getRequired());
+		}
+
+		List<DtoField> fields = buildFields(schema, required);
+
+		dtoRegistry.put(name, DtoSchema.of(name, "", fields));
+	}
+
+	@SuppressWarnings("unchecked")
+	private List<DtoField> buildFields(Schema schema, Set<String> required) {
+		if (schema.getProperties() == null) {
+			return List.of();
+		}
+
+		Map<String, Schema> properties = (Map<String, Schema>) schema.getProperties();
+
+		return properties.entrySet().stream()
+				.map(entry -> buildField(entry.getKey(), entry.getValue(), required))
+				.collect(Collectors.toList());
+	}
+
+	private DtoField buildField(String propName, Schema propSchema, Set<String> required) {
+		String fieldName = toLowerCamelCase(propName);
+		boolean isRequired = required.contains(propName);
+		ApiSchema fieldType = resolve(propSchema, toPascalCase(propName));
+		List<ValidationConstraint> constraints = validationMapper.map(propSchema, isRequired);
+		boolean isNullable = fieldType.nullable();
+		boolean isReadOnly = Boolean.TRUE.equals(propSchema.getReadOnly());
+
+		return new DtoField(fieldName, propName, fieldType.javaType(), isRequired, constraints, isNullable, isReadOnly);
+	}
+
+	/**
+	 * Returns only the DTOs referenced during the current session (since last {@link #resetSession()}).
+	 */
+	public List<DtoSchema> getSessionDtos() {
+		return sessionReferenced.stream()
+				.map(dtoRegistry::get)
+				.filter(Objects::nonNull)
+				.collect(Collectors.toList());
+	}
+
+	/**
+	 * Adds a schema and all schemas transitively referenced through its fields to the session.
+	 *
+	 * <p>Uses the return value of {@link Set#add} to detect first-visit, preventing infinite
+	 * recursion on self-referential schemas.
+	 */
+	private void ensureTransitivesTracked(String className) {
+		if (className == null || !dtoRegistry.containsKey(className) || !sessionReferenced.add(className)) {
+			return;
+		}
+
+		DtoSchema dto = dtoRegistry.get(className);
+
+		if (dto == null) {
+			return;
+		}
+
+		for (DtoField field : dto.fields()) {
+			String fieldType = field.javaType();
+
+			if (fieldType.startsWith("List<") && fieldType.endsWith(">")) {
+				fieldType = fieldType.substring(5, fieldType.length() - 1);
+			}
+
+			if (dtoRegistry.containsKey(fieldType)) {
+				ensureTransitivesTracked(fieldType);
+			}
+		}
+	}
+
+	/** Clears the session reference tracker. Call before processing each new resource. */
+	public void resetSession() {
+		sessionReferenced.clear();
+	}
+
+	private Schema resolveRef(String name) {
+		if (openApi.getComponents() == null || openApi.getComponents().getSchemas() == null) {
+			return null;
+		}
+
+		return openApi.getComponents().getSchemas().get(name);
+	}
+
+	private static String extractRefName(String ref) {
+		if (ref == null) {
+			return null;
+		}
+
+		int idx = ref.lastIndexOf('/');
+
+		if (idx >= 0) {
+			return ref.substring(idx + 1);
+		}
+
+		return ref;
+	}
+
+	private static boolean hasProperties(Schema schema) {
+		return schema.getProperties() != null && !schema.getProperties().isEmpty();
+	}
+
+	static String toPascalCase(String name) {
+		if (name == null || name.isEmpty()) {
+			return name;
+		}
+
+		String[] parts = name.split("[_\\-]");
+		StringBuilder sb = new StringBuilder();
+
+		for (String part : parts) {
+			if (!part.isEmpty()) {
+				sb.append(Character.toUpperCase(part.charAt(0)));
+
+				if (part.length() > 1) {
+					sb.append(part.substring(1));
+				}
+			}
+		}
+
+		return sb.toString();
+	}
+
+	static String toLowerCamelCase(String name) {
+		String pascal = toPascalCase(name);
+
+		if (pascal.isEmpty()) {
+			return pascal;
+		}
+
+		return Character.toLowerCase(pascal.charAt(0)) + pascal.substring(1);
+	}
 }

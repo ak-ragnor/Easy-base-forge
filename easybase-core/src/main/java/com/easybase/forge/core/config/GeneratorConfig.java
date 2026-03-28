@@ -2,6 +2,9 @@ package com.easybase.forge.core.config;
 
 import java.nio.file.Path;
 
+import com.easybase.forge.core.config.layout.LayoutStrategy;
+import com.easybase.forge.core.config.layout.LayoutStrategyFactory;
+
 /**
  * Root configuration object parsed from {@code easybase-config.yaml}.
  *
@@ -28,75 +31,84 @@ import java.nio.file.Path;
  */
 public class GeneratorConfig {
 
-    private String basePackage;
-    private OutputConfig output = new OutputConfig();
-    private StructureConfig structure = new StructureConfig();
-    private GenerateOptions generate = new GenerateOptions();
+	private String basePackage;
+	private OutputConfig output = new OutputConfig();
+	private StructureConfig structure = new StructureConfig();
+	private GenerateOptions generate = new GenerateOptions();
 
-    private Path resolvedOutputDirectory;
+	private Path resolvedOutputDirectory;
 
-    public String getBasePackage() {
-        return basePackage;
-    }
+	private transient LayoutStrategy layoutStrategy;
 
-    public void setBasePackage(String basePackage) {
-        this.basePackage = basePackage;
-    }
+	public String getBasePackage() {
+		return basePackage;
+	}
 
-    public OutputConfig getOutput() {
-        return output;
-    }
+	public void setBasePackage(String basePackage) {
+		this.basePackage = basePackage;
+		this.layoutStrategy = null;
+	}
 
-    public void setOutput(OutputConfig output) {
-        this.output = output;
-    }
+	public OutputConfig getOutput() {
+		return output;
+	}
 
-    public StructureConfig getStructure() {
-        return structure;
-    }
+	public void setOutput(OutputConfig output) {
+		this.output = output;
+		this.layoutStrategy = null;
+	}
 
-    public void setStructure(StructureConfig structure) {
-        this.structure = structure;
-    }
+	public StructureConfig getStructure() {
+		return structure;
+	}
 
-    public GenerateOptions getGenerate() {
-        return generate;
-    }
+	public void setStructure(StructureConfig structure) {
+		this.structure = structure;
+	}
 
-    public void setGenerate(GenerateOptions generate) {
-        this.generate = generate;
-    }
+	public GenerateOptions getGenerate() {
+		return generate;
+	}
 
-    public Path getResolvedOutputDirectory() {
-        return resolvedOutputDirectory;
-    }
+	public void setGenerate(GenerateOptions generate) {
+		this.generate = generate;
+	}
 
-    public GeneratorConfig withOutputDirectory(Path outputDirectory) {
-        this.resolvedOutputDirectory = outputDirectory;
-        return this;
-    }
+	public Path getResolvedOutputDirectory() {
+		return resolvedOutputDirectory;
+	}
 
-    /**
-     * Returns the {@link LayoutStrategy} for this configuration.
-     *
-     * <p>Defaults to {@link FlatLayoutStrategy} when no {@code output.layout} is set.
-     */
-    public LayoutStrategy getLayoutStrategy() {
-        LayoutMode mode = (output != null && output.getLayout() != null)
-                ? output.getLayout()
-                : LayoutMode.FLAT;
-        return mode == LayoutMode.FLAT
-                ? new FlatLayoutStrategy(basePackage)
-                : new MultiModuleLayoutStrategy(basePackage);
-    }
+	public GeneratorConfig withOutputDirectory(Path outputDirectory) {
+		this.resolvedOutputDirectory = outputDirectory;
+		return this;
+	}
 
-    /**
-     * Resolve a package pattern by substituting {@code {basePackage}}, {@code {resource}},
-     * and {@code {Resource}} placeholders.
-     *
-     * <p>Delegates to {@link #getLayoutStrategy()}.
-     */
-    public String resolvePackage(String pattern, String resourceName) {
-        return getLayoutStrategy().resolvePackage(pattern, resourceName);
-    }
+	/**
+	 * Returns the {@link LayoutStrategy} for this configuration.
+	 *
+	 * <p>Defaults to {@link com.easybase.forge.core.config.layout.FlatLayoutStrategy} when no {@code output.layout} is set.
+	 */
+	public LayoutStrategy getLayoutStrategy() {
+		if (layoutStrategy == null) {
+			LayoutMode mode = LayoutMode.FLAT;
+
+			if (output != null && output.getLayout() != null) {
+				mode = output.getLayout();
+			}
+
+			layoutStrategy = LayoutStrategyFactory.create(mode, basePackage);
+		}
+
+		return layoutStrategy;
+	}
+
+	/**
+	 * Resolve a package pattern by substituting {@code {basePackage}}, {@code {resource}},
+	 * and {@code {Resource}} placeholders.
+	 *
+	 * <p>Delegates to {@link #getLayoutStrategy()}.
+	 */
+	public String resolvePackage(String pattern, String resourceName) {
+		return getLayoutStrategy().resolvePackage(pattern, resourceName);
+	}
 }
