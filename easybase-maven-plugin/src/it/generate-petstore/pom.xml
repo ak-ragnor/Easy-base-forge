@@ -25,7 +25,7 @@
                     <execution>
                         <id>generate-rest-layer</id>
                         <goals>
-                            <goal>generate</goal>
+                            <goal>build-rest</goal>
                         </goals>
                     </execution>
                 </executions>

@@ -19,7 +19,7 @@ import com.easybase.forge.core.engine.GeneratorEngine;
 import com.easybase.forge.core.writer.GenerationReport;
 
 /**
- * Generates Spring Boot REST layer (controllers, delegates, DTOs) from an OpenAPI spec.
+ * Generates the Spring Boot REST layer (controllers, delegates, DTOs) from an OpenAPI spec.
  *
  * <p>Example usage in a project's {@code pom.xml}:
  * <pre>{@code
@@ -32,14 +32,14 @@ import com.easybase.forge.core.writer.GenerationReport;
  *   </configuration>
  *   <executions>
  *     <execution>
- *       <goals><goal>generate</goal></goals>
+ *       <goals><goal>build-rest</goal></goals>
  *     </execution>
  *   </executions>
  * </plugin>
  * }</pre>
  */
-@Mojo(name = "generate", defaultPhase = LifecyclePhase.GENERATE_SOURCES)
-public class GenerateMojo extends AbstractMojo {
+@Mojo(name = "build-rest", defaultPhase = LifecyclePhase.GENERATE_SOURCES)
+public class BuildRestMojo extends AbstractMojo {
 
 	private static final long POST_GENERATE_TIMEOUT_MINUTES = 10L;
 

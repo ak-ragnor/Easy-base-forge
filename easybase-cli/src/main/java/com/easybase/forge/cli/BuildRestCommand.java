@@ -18,10 +18,10 @@ import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 @Command(
-		name = "generate",
-		description = "Generate Spring Boot REST layer from an OpenAPI spec.",
+		name = "build-rest",
+		description = "Generate Spring Boot REST layer (controllers, delegates, DTOs) from an OpenAPI spec.",
 		mixinStandardHelpOptions = true)
-public class GenerateCommand implements Callable<Integer> {
+public class BuildRestCommand implements Callable<Integer> {
 
 	@Parameters(index = "0", description = "Path to the OpenAPI YAML/JSON spec file.")
 	private File specFile;

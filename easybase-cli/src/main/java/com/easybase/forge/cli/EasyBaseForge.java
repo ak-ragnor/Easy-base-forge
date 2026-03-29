@@ -5,10 +5,10 @@ import picocli.CommandLine.Command;
 
 @Command(
 		name = "easybase",
-		description = "EasyBase REST Builder — OpenAPI-first Spring Boot REST layer generator.",
+		description = "EasyBase Forge — Spring Boot REST and service layer code generator.",
 		mixinStandardHelpOptions = true,
 		version = "0.1.0",
-		subcommands = {GenerateCommand.class, CommandLine.HelpCommand.class})
+		subcommands = {BuildRestCommand.class, BuildServiceCommand.class, CommandLine.HelpCommand.class})
 public class EasyBaseForge implements Runnable {
 
 	public static void main(String[] args) {

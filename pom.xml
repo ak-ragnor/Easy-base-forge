@@ -9,8 +9,8 @@
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>EasyBase REST Builder</name>
-    <description>OpenAPI-first REST layer code generator for Spring Boot</description>
+    <name>EasyBase Forge</name>
+    <description>OpenAPI-first REST layer and domain-driven service layer code generator for Spring Boot</description>
     <url>https://github.com/easybase/easy-base-forge</url>
 
     <licenses>
@@ -43,6 +43,7 @@
 
     <modules>
         <module>easybase-core</module>
+        <module>easybase-service-runtime</module>
         <module>easybase-test-fixtures</module>
         <module>easybase-maven-plugin</module>
         <module>easybase-cli</module>
@@ -159,6 +160,11 @@
             <dependency>
                 <groupId>com.easybase</groupId>
                 <artifactId>easybase-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.easybase</groupId>
+                <artifactId>easybase-service-runtime</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

@@ -27,6 +27,12 @@ import com.easybase.forge.core.config.layout.LayoutStrategyFactory;
  *   responseEntityWrapping: ALWAYS
  *   beanValidation: true
  *   pagination: NONE
+ * service:
+ *   audit:
+ *     enabled: true
+ *     auditorType: UUID
+ *     softDelete: true
+ *     softDeleteColumn: deleted
  * </pre>
  */
 public class GeneratorConfig {
@@ -35,6 +41,7 @@ public class GeneratorConfig {
 	private OutputConfig output = new OutputConfig();
 	private StructureConfig structure = new StructureConfig();
 	private GenerateOptions generate = new GenerateOptions();
+	private ServiceDefaults service = new ServiceDefaults();
 
 	private Path resolvedOutputDirectory;
 
@@ -72,6 +79,14 @@ public class GeneratorConfig {
 
 	public void setGenerate(GenerateOptions generate) {
 		this.generate = generate;
+	}
+
+	public ServiceDefaults getService() {
+		return service;
+	}
+
+	public void setService(ServiceDefaults service) {
+		this.service = service;
 	}
 
 	public Path getResolvedOutputDirectory() {

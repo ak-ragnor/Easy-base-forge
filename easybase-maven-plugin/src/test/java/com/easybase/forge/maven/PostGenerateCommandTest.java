@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Verifies the post-generation command runner in {@link GenerateMojo}
+ * Verifies the post-generation command runner in {@link BuildRestMojo}
  * via a package-private accessor.
  */
 class PostGenerateCommandTest {
@@ -22,7 +22,7 @@ class PostGenerateCommandTest {
 	 * Thin subclass that exposes the otherwise-private
 	 * {@code runPostGenerateCommand} for direct testing.
 	 */
-	static class TestableMojo extends GenerateMojo {
+	static class TestableMojo extends BuildRestMojo {
 
 		void runCommand(String command, Path dir) throws MojoExecutionException {
 			runPostGenerateCommand(command, dir);
