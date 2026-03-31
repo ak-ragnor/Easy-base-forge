@@ -1,0 +1,28 @@
+entity: Product
+basePackage: com.example.app
+tablePrefix: ""
+idType: Long
+
+fields:
+  - name: name
+    type: String
+    required: true
+    maxLength: 200
+  - name: price
+    type: BigDecimal
+
+audit:
+  enabled: true
+  softDelete: false
+  auditorType: String
+
+crud:
+  create: true
+  update: true
+  delete: false
+  get: true
+  list: true
+
+hook:
+  enabled: true
+  multiple: false

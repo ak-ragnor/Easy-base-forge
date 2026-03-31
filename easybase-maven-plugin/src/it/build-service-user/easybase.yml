@@ -1,0 +1,37 @@
+entity: User
+tablePrefix: eb_
+idType: UUID
+
+fields:
+  - name: email
+    type: String
+    required: true
+    maxLength: 255
+    unique: true
+  - name: firstName
+    type: String
+    maxLength: 100
+  - name: lastName
+    type: String
+    maxLength: 100
+
+relationships:
+  - type: MANY_TO_ONE
+    entity: Tenant
+    field: tenant
+    column: tenant_id
+    nullable: false
+    fetch: LAZY
+    cascade: []
+    foreignKey: fk_eb_users_tenant_id
+
+crud:
+  create: true
+  update: true
+  delete: true
+  get: true
+  list: true
+
+hook:
+  enabled: true
+  multiple: true
