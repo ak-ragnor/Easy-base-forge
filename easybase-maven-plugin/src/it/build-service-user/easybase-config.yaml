@@ -2,3 +2,22 @@ basePackage: com.example.userservice
 
 output:
   directory: target/generated-sources/easybase
+
+structure:
+  # ── Service builder package patterns ─────────────────────────────────────────
+  model:
+    package: "{basePackage}.{module}.domain.model"
+  entity:
+    package: "{basePackage}.{module}.domain.entity"
+  repository:
+    package: "{basePackage}.{module}.infrastructure.repository"
+    basePackage: "{basePackage}.{module}.infrastructure.repository.base"
+  persistence:
+    package: "{basePackage}.{module}.infrastructure.persistence"
+    basePackage: "{basePackage}.{module}.infrastructure.persistence.base"
+  hook:
+    package: "{basePackage}.{module}.infrastructure.hook"
+    basePackage: "{basePackage}.{module}.infrastructure.hook.base"
+  service:
+    package: "{basePackage}.{module}.service"
+    basePackage: "{basePackage}.{module}.service.base"

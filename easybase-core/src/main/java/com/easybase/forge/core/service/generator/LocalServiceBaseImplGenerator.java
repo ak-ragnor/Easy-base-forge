@@ -19,7 +19,6 @@ import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
-
 public class LocalServiceBaseImplGenerator implements ServiceArtifactGenerator {
 
 	@Override

@@ -5,35 +5,6 @@ import java.nio.file.Path;
 import com.easybase.forge.core.config.layout.LayoutStrategy;
 import com.easybase.forge.core.config.layout.LayoutStrategyFactory;
 
-/**
- * Root configuration object parsed from {@code easybase-config.yaml}.
- *
- * <p>Example YAML:
- * <pre>
- * basePackage: com.example.api
- * output:
- *   directory: ../api-rest/src/main/java
- *   layout: MULTI_MODULE
- * structure:
- *   controller:
- *     package: "{basePackage}.{resource}.controller"
- *     basePackage: "{basePackage}.{resource}.controller.base"
- *   delegate:
- *     package: "{basePackage}.{resource}.delegate"
- *   dto:
- *     package: "{basePackage}.{resource}.dto"
- * generate:
- *   delegateImpl: false
- *   responseEntityWrapping: ALWAYS
- *   beanValidation: true
- *   pagination: NONE
- *   addGeneratedAnnotation: true
- *   authors:
- *     - "EasyBase Demo"
- *   slf4j: false
- *   postGenerateCommand: "echo done"
- * </pre>
- */
 public class GeneratorConfig {
 
 	private String basePackage;

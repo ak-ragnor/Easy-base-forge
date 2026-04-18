@@ -11,6 +11,8 @@ import java.util.List;
 import com.easybase.forge.core.config.ConfigException;
 import com.easybase.forge.core.config.GeneratorConfig;
 import com.easybase.forge.core.config.LayoutMode;
+import com.easybase.forge.core.config.ServicePackageConfig;
+import com.easybase.forge.core.config.StructureConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
@@ -38,6 +40,11 @@ public class ServiceConfigLoader {
 		applyResolvedGenerateOptions(config, projectConfig);
 
 		resolveConfig(config);
+
+		if (projectConfig != null) {
+			applyStructureOverrides(config.getResolvedStructure(), projectConfig.getStructure());
+		}
+
 		config.setResolvedOutputDirectory(outputDirectory);
 
 		validate(config, entityConfigFile);
@@ -62,6 +69,10 @@ public class ServiceConfigLoader {
 
 		ServiceStructureConfig structure =
 				root.getStructure() != null ? mergeStructure(root.getStructure()) : new ServiceStructureConfig();
+
+		if (projectConfig != null) {
+			applyStructureOverrides(structure, projectConfig.getStructure());
+		}
 
 		List<ServiceConfig> result = new ArrayList<>();
 
@@ -141,6 +152,64 @@ public class ServiceConfigLoader {
 		if (override.getServiceBase() != null) merged.setServiceBase(override.getServiceBase());
 		if (override.getService() != null) merged.setService(override.getService());
 		return merged;
+	}
+
+	private static void applyStructureOverrides(ServiceStructureConfig resolved, StructureConfig projectStructure) {
+		if (projectStructure == null) {
+			return;
+		}
+
+		ServicePackageConfig model = projectStructure.getModel();
+		if (model != null && model.getPkg() != null) {
+			resolved.setModel(model.getPkg());
+		}
+
+		ServicePackageConfig entity = projectStructure.getEntity();
+		if (entity != null && entity.getPkg() != null) {
+			resolved.setEntity(entity.getPkg());
+		}
+
+		ServicePackageConfig repository = projectStructure.getRepository();
+		if (repository != null) {
+			if (repository.getPkg() != null) {
+				resolved.setRepository(repository.getPkg());
+			}
+			if (repository.getBasePkg() != null) {
+				resolved.setRepositoryBase(repository.getBasePkg());
+			}
+		}
+
+		ServicePackageConfig persistence = projectStructure.getPersistence();
+		if (persistence != null) {
+			if (persistence.getPkg() != null) {
+				resolved.setJpaRepository(persistence.getPkg());
+				resolved.setPersistenceAdapter(persistence.getPkg());
+			}
+			if (persistence.getBasePkg() != null) {
+				resolved.setJpaRepositoryBase(persistence.getBasePkg());
+				resolved.setPersistenceAdapterBase(persistence.getBasePkg());
+			}
+		}
+
+		ServicePackageConfig hook = projectStructure.getHook();
+		if (hook != null) {
+			if (hook.getPkg() != null) {
+				resolved.setHook(hook.getPkg());
+			}
+			if (hook.getBasePkg() != null) {
+				resolved.setHookBase(hook.getBasePkg());
+			}
+		}
+
+		ServicePackageConfig service = projectStructure.getService();
+		if (service != null) {
+			if (service.getPkg() != null) {
+				resolved.setService(service.getPkg());
+			}
+			if (service.getBasePkg() != null) {
+				resolved.setServiceBase(service.getBasePkg());
+			}
+		}
 	}
 
 	private static void resolveConfig(ServiceConfig config) {

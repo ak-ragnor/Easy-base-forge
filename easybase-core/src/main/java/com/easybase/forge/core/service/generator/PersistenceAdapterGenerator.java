@@ -18,7 +18,6 @@ import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeSpec;
 
-
 public class PersistenceAdapterGenerator implements ServiceArtifactGenerator {
 
 	@Override

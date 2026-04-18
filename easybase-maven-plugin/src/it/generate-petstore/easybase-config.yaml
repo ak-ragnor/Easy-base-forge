@@ -6,12 +6,12 @@ output:
 
 structure:
   controller:
-    package: "{basePackage}.{resource}.controller"
-    basePackage: "{basePackage}.{resource}.controller.base"
+    package: "{basePackage}.{module}.controller"
+    basePackage: "{basePackage}.{module}.controller.base"
   delegate:
-    package: "{basePackage}.{resource}.delegate"
+    package: "{basePackage}.{module}.delegate"
   dto:
-    package: "{basePackage}.{resource}.dto"
+    package: "{basePackage}.{module}.dto"
 
 generate:
   delegateImpl: false

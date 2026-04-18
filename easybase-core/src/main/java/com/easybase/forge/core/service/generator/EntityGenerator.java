@@ -21,7 +21,6 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
-
 public class EntityGenerator implements ServiceArtifactGenerator {
 
 	@Override

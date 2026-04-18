@@ -20,9 +20,9 @@ OpenAPI spec (api.yaml)
 │         regenerate — never loses your │
 │         changes)                      │
 │                                       │
-│  {Resource}ControllerBase.java        │  ← abstract Spring controller
-│  {Resource}ApiDelegate.java           │  ← endpoint interface
-│  {Resource}ApiDelegateImplBase.java   │  ← stub base (if delegateImpl: true)
+│  {Module}ControllerBase.java        │  ← abstract Spring controller
+│  {Module}ApiDelegate.java           │  ← endpoint interface
+│  {Module}ApiDelegateImplBase.java   │  ← stub base (if delegateImpl: true)
 │  DTOs / Request objects               │  ← Lombok + validation
 └───────────────────────────────────────┘
         │
@@ -31,8 +31,8 @@ OpenAPI spec (api.yaml)
 │         CUSTOM (written once,         │
 │         never overwritten)            │
 │                                       │
-│  {Resource}Controller.java            │  ← extends ControllerBase
-│  {Resource}ApiDelegateImpl.java       │  ← your business logic
+│  {Module}Controller.java            │  ← extends ControllerBase
+│  {Module}ApiDelegateImpl.java       │  ← your business logic
 └───────────────────────────────────────┘
 ```
 
@@ -46,11 +46,11 @@ For each resource (OpenAPI **tag**) in your spec:
 
 | Artifact | Overwritten | Description |
 |----------|:-----------:|-------------|
-| `{Resource}ControllerBase.java` | ✅ Always | Abstract `@RestController` wired to the delegate |
-| `{Resource}Controller.java` | ❌ Never | Your thin extension — add `@PreAuthorize`, custom logic here |
-| `{Resource}ApiDelegate.java` | ✅ Always | Interface with one method per endpoint |
-| `{Resource}ApiDelegateImplBase.java` | ✅ Always | Abstract stub — all methods throw `UnsupportedOperationException` |
-| `{Resource}ApiDelegateImpl.java` | ❌ Never | Your implementation — override only what you need |
+| `{Module}ControllerBase.java` | ✅ Always | Abstract `@RestController` wired to the delegate |
+| `{Module}Controller.java` | ❌ Never | Your thin extension — add `@PreAuthorize`, custom logic here |
+| `{Module}ApiDelegate.java` | ✅ Always | Interface with one method per endpoint |
+| `{Module}ApiDelegateImplBase.java` | ✅ Always | Abstract stub — all methods throw `UnsupportedOperationException` |
+| `{Module}ApiDelegateImpl.java` | ❌ Never | Your implementation — override only what you need |
 | DTOs and request/response classes | ✅ Always | Lombok `@Data` classes with Jakarta validation annotations |
 
 `DelegateImplBase` + `DelegateImpl` are only generated when `generate.delegateImpl: true`.
@@ -110,7 +110,7 @@ generate:
   delegateImpl: true
 ```
 
-Generates `{Resource}ApiDelegateImplBase` (always regenerated) and `{Resource}ApiDelegateImpl` (written once). Override only the methods you implement — unimplemented ones throw `UnsupportedOperationException` at runtime.
+Generates `{Module}ApiDelegateImplBase` (always regenerated) and `{Module}ApiDelegateImpl` (written once). Override only the methods you implement — unimplemented ones throw `UnsupportedOperationException` at runtime.
 
 ### Controller Annotations
 
@@ -255,13 +255,15 @@ output:
   layout: FLAT                      # FLAT | MULTI_MODULE
 
 structure:
+  # {module} is substituted with the resource name in MULTI_MODULE layout,
+  # and stripped in FLAT layout. Omit {module} entirely for truly flat packages.
   controller:
-    package:     "{basePackage}.controller"
-    basePackage: "{basePackage}.controller.base"
+    package:     "{basePackage}.{module}.controller"
+    basePackage: "{basePackage}.{module}.controller.base"
   delegate:
-    package: "{basePackage}.delegate"
+    package: "{basePackage}.{module}.delegate"
   dto:
-    package: "{basePackage}.dto"
+    package: "{basePackage}.{module}.dto"
 
 generate:
   delegateImpl:           true
@@ -282,13 +284,16 @@ generate:
 
 ### Package Pattern Placeholders
 
-Placeholders in `structure.*` patterns are substituted per resource:
+Always write `{module}` in your patterns — the engine resolves it based on `output.layout`:
 
 | Placeholder | Expands to |
 |-------------|------------|
 | `{basePackage}` | Value of `basePackage` root field |
-| `{resource}` | Resource name, lowercase (e.g. `pets`) |
-| `{Resource}` | Resource name, capitalized (e.g. `Pets`) |
+| `{module}` | Resource name lowercase in `MULTI_MODULE` (e.g. `pets`); stripped automatically in `FLAT` |
+
+Example — pattern `{basePackage}.{module}.controller`:
+- `MULTI_MODULE` → `com.example.pets.controller`
+- `FLAT` → `com.example.controller` (engine strips `{module}` and cleans up dots)
 
 ### `generate` Options
 

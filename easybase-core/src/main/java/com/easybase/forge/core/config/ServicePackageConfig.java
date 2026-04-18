@@ -2,13 +2,15 @@ package com.easybase.forge.core.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class ControllerStructureConfig {
+public class ServicePackageConfig {
 
 	@JsonProperty("package")
-	private String pkg = "{basePackage}.{module}.controller";
+	private String pkg;
 
 	@JsonProperty("basePackage")
-	private String basePkg = "{basePackage}.{module}.controller.base";
+	private String basePkg;
+
+	public ServicePackageConfig() {}
 
 	public String getPkg() {
 		return pkg;
