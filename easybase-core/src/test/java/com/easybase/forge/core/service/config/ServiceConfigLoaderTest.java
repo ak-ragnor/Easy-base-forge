@@ -14,24 +14,15 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.easybase.forge.core.config.ConfigException;
 
-/**
- * Tests for {@link ServiceConfigLoader}: YAML parsing, project-defaults merging,
- * basePackage inheritance, and validation error reporting.
- */
 class ServiceConfigLoaderTest {
 
 	@TempDir
 	Path outputDir;
 
-	// -------------------------------------------------------------------------
-	// Load entity config only (no project config)
-	// -------------------------------------------------------------------------
-
 	@Test
 	void loadEntityOnly_appliesAuditDefaults() {
 		ServiceConfig config = loadConfig("post.yml");
 
-		// post.yml disables audit entirely — this tests defaults inside the entity file
 		assertThat(config.getResolvedAudit().enabled()).isFalse();
 	}
 
@@ -39,7 +30,7 @@ class ServiceConfigLoaderTest {
 	void loadEntityOnly_userYaml_softDeleteEnabled() {
 		ServiceConfig config = loadConfig("user.yml");
 
-		assertThat(config.getResolvedAudit().softDelete()).isTrue();
+		assertThat(config.getResolvedSoftDelete().enabled()).isTrue();
 	}
 
 	@Test
@@ -70,10 +61,6 @@ class ServiceConfigLoaderTest {
 		assertThat(config.getResolvedOutputDirectory()).isEqualTo(outputDir);
 	}
 
-	// -------------------------------------------------------------------------
-	// Load with project config — basePackage inheritance
-	// -------------------------------------------------------------------------
-
 	@Test
 	void loadWithProjectConfig_inheritsBasePackageFromProject() throws IOException {
 		Path entityConfig = writeEntityYaml("entity: Widget\n");
@@ -94,48 +81,26 @@ class ServiceConfigLoaderTest {
 		assertThat(config.getBasePackage()).isEqualTo("com.entity.pkg");
 	}
 
-	// -------------------------------------------------------------------------
-	// Load with project config — audit merging
-	// -------------------------------------------------------------------------
-
 	@Test
-	void loadWithProjectConfig_entityAuditOverridesProjectSoftDelete() throws IOException {
-		Path entityConfig =
-				writeEntityYaml("entity: Widget\nbasePackage: com.example.app\naudit:\n  softDelete: false\n");
-		Path projectConfig =
-				writeProjectYaml("basePackage: com.example.app\nservice:\n  audit:\n    softDelete: true\n");
+	void loadWithProjectConfig_inheritsAuthorsFromProjectGenerate() throws IOException {
+		Path entityConfig = writeEntityYaml("entity: Widget\nbasePackage: com.example.app\n");
+		Path projectConfig = writeProjectYaml("basePackage: com.example.app\ngenerate:\n  authors:\n    - EasyBase\n");
 
 		ServiceConfig config = ServiceConfigLoader.load(projectConfig, entityConfig, outputDir);
 
-		assertThat(config.getResolvedAudit().softDelete()).isFalse();
+		assertThat(config.getResolvedAuthors()).contains("EasyBase");
 	}
 
 	@Test
-	void loadWithProjectConfig_projectAuditAppliesWhenEntityHasNoOverride() throws IOException {
+	void loadWithProjectConfig_inheritsAddGeneratedAnnotationFromProject() throws IOException {
 		Path entityConfig = writeEntityYaml("entity: Widget\nbasePackage: com.example.app\n");
 		Path projectConfig =
-				writeProjectYaml("basePackage: com.example.app\nservice:\n  audit:\n    auditorType: \"Long\"\n");
+				writeProjectYaml("basePackage: com.example.app\ngenerate:\n  addGeneratedAnnotation: true\n");
 
 		ServiceConfig config = ServiceConfigLoader.load(projectConfig, entityConfig, outputDir);
 
-		assertThat(config.getResolvedAudit().auditorType()).isEqualTo("Long");
+		assertThat(config.isResolvedAddGeneratedAnnotation()).isTrue();
 	}
-
-	@Test
-	void loadWithProjectConfig_entityAuditorTypeOverridesProject() throws IOException {
-		Path entityConfig =
-				writeEntityYaml("entity: Widget\nbasePackage: com.example.app\naudit:\n  auditorType: \"String\"\n");
-		Path projectConfig =
-				writeProjectYaml("basePackage: com.example.app\nservice:\n  audit:\n    auditorType: \"Long\"\n");
-
-		ServiceConfig config = ServiceConfigLoader.load(projectConfig, entityConfig, outputDir);
-
-		assertThat(config.getResolvedAudit().auditorType()).isEqualTo("String");
-	}
-
-	// -------------------------------------------------------------------------
-	// Validation errors
-	// -------------------------------------------------------------------------
 
 	@Test
 	void load_throwsConfigException_whenEntityNameMissing() throws IOException {
@@ -173,10 +138,6 @@ class ServiceConfigLoaderTest {
 
 		assertThat(config.getEntity()).isEqualTo("Widget");
 	}
-
-	// -------------------------------------------------------------------------
-	// Helpers
-	// -------------------------------------------------------------------------
 
 	private ServiceConfig loadConfig(String yamlResource) {
 		URL url = getClass().getResource("/service/" + yamlResource);

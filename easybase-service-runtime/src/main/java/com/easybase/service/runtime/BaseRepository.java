@@ -7,25 +7,34 @@ import java.util.Optional;
  * Persistence contract for all generated repository interfaces.
  *
  * <p>This interface intentionally hides Spring Data JPA from the service layer.
- * The generated {@code UserPersistenceAdapter} implements this interface and
- * delegates to a Spring Data {@code UserJpaRepository} internally.
+ * The generated {@code *PersistenceAdapter} implements this interface and
+ * delegates to a Spring Data {@code *JpaRepository} internally.
  *
- * <p>The contract for {@link #deleteById(Object)} is deliberately abstract:
- * the persistence adapter decides whether to hard-delete or soft-delete based
- * on the {@code audit.softDelete} configuration at generation time.
+ * <p>Create and update are separate operations so that lifecycle hooks can
+ * distinguish between the two. The persistence adapter decides whether to
+ * hard-delete or soft-delete based on the {@code softDelete} configuration.
  *
- * @param <T>  the domain model type (immutable record)
+ * @param <T>  the domain model type (plain POJO)
  * @param <ID> the primary key type
  */
 public interface BaseRepository<T, ID> {
 
 	/**
-	 * Persists a new or updated domain model.
+	 * Persists a new domain model.
 	 *
-	 * @param entity the domain model to save
-	 * @return the saved domain model
+	 * @param entity the domain model to create
+	 * @return the created domain model (may differ from input, e.g. generated ID)
 	 */
-	T save(T entity);
+	T create(T entity);
+
+	/**
+	 * Updates an existing domain model.
+	 *
+	 * @param id     the primary key of the entity to update
+	 * @param entity the updated domain model
+	 * @return the saved domain model after update
+	 */
+	T update(ID id, T entity);
 
 	/**
 	 * Finds a domain model by its primary key.
@@ -51,7 +60,7 @@ public interface BaseRepository<T, ID> {
 	 *
 	 * <p>The implementation determines whether this is a hard delete or a soft delete
 	 * (setting a {@code deleted} flag). This decision is made at generation time via
-	 * {@code audit.softDelete} in {@code easybase-config.yaml}.
+	 * {@code softDelete.enabled} configuration.
 	 *
 	 * @param id the primary key of the entity to delete
 	 */

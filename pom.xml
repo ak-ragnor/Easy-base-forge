@@ -62,6 +62,9 @@
         <jmustache.version>1.15</jmustache.version>
         <jackson.version>2.17.1</jackson.version>
         <picocli.version>4.7.6</picocli.version>
+        <jakarta.persistence-api.version>3.1.0</jakarta.persistence-api.version>
+        <hibernate-core.version>6.4.4.Final</hibernate-core.version>
+        <lombok.version>1.18.34</lombok.version>
 
         <!-- Test dependencies -->
         <junit.version>5.11.0</junit.version>
@@ -91,14 +94,31 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- OpenAPI parsing -->
+            <dependency>
+                <groupId>jakarta.persistence</groupId>
+                <artifactId>jakarta.persistence-api</artifactId>
+                <version>${jakarta.persistence-api.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.hibernate.orm</groupId>
+                <artifactId>hibernate-core</artifactId>
+                <version>${hibernate-core.version}</version>
+                <scope>provided</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+                <scope>provided</scope>
+            </dependency>
+
             <dependency>
                 <groupId>io.swagger.parser.v3</groupId>
                 <artifactId>swagger-parser</artifactId>
                 <version>${swagger-parser.version}</version>
             </dependency>
 
-            <!-- Java code generation -->
             <dependency>
                 <groupId>com.squareup</groupId>
                 <artifactId>javapoet</artifactId>
@@ -110,7 +130,6 @@
                 <version>${jmustache.version}</version>
             </dependency>
 
-            <!-- Config parsing -->
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
@@ -122,13 +141,11 @@
                 <version>${jackson.version}</version>
             </dependency>
 
-            <!-- CLI -->
             <dependency>
                 <groupId>info.picocli</groupId>
                 <artifactId>picocli</artifactId>
                 <version>${picocli.version}</version>
             </dependency>
-            <!-- picocli annotation processor — generates GraalVM native-image metadata -->
             <dependency>
                 <groupId>info.picocli</groupId>
                 <artifactId>picocli-codegen</artifactId>
@@ -136,7 +153,6 @@
                 <scope>provided</scope>
             </dependency>
 
-            <!-- Maven plugin -->
             <dependency>
                 <groupId>org.apache.maven</groupId>
                 <artifactId>maven-plugin-api</artifactId>
@@ -156,7 +172,6 @@
                 <scope>provided</scope>
             </dependency>
 
-            <!-- Internal modules -->
             <dependency>
                 <groupId>com.easybase</groupId>
                 <artifactId>easybase-core</artifactId>
@@ -174,7 +189,6 @@
                 <scope>test</scope>
             </dependency>
 
-            <!-- Test -->
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter</artifactId>
@@ -276,7 +290,6 @@
                 </configuration>
 
                 <executions>
-                    <!-- Auto format -->
                     <execution>
                         <id>spotless-apply</id>
                         <phase>process-sources</phase>
@@ -285,7 +298,6 @@
                         </goals>
                     </execution>
 
-                    <!-- Verify -->
                     <execution>
                         <id>spotless-check</id>
                         <phase>verify</phase>

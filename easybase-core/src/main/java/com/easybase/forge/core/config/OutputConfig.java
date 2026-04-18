@@ -6,7 +6,7 @@ package com.easybase.forge.core.config;
 public class OutputConfig {
 
 	private String directory;
-	private LayoutMode layout = LayoutMode.FLAT;
+	private LayoutMode layout;
 
 	public String getDirectory() {
 		return directory;

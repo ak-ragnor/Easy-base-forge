@@ -1,0 +1,35 @@
+entity: Order
+basePackage: com.example.app
+tablePrefix: eb_
+
+id:
+  type: UUID
+
+audit:
+  enabled: true
+  auditorType: UUID
+
+softDelete:
+  enabled: true
+
+tenant:
+  enabled: true
+  tenantIdType: Long
+
+fields:
+  - name: status
+    type: String
+    required: true
+    maxLength: 50
+  - name: totalAmount
+    type: BigDecimal
+
+crud:
+  create: true
+  update: true
+  delete: true
+  get: true
+  list: true
+
+hook:
+  enabled: false

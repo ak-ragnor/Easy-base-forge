@@ -16,16 +16,12 @@ import com.easybase.forge.core.service.config.ServiceConfigLoader;
 
 /**
  * Tests for {@link EntityGenerator}: verifies the @Entity JPA class output
- * including table naming, relationships, audit inheritance, and column constraints.
+ * including table naming, inline trait fields, FK-only relationships, and column constraints.
  */
 class EntityGeneratorTest {
 
 	@TempDir
 	Path outputDir;
-
-	// -------------------------------------------------------------------------
-	// Class-level annotations
-	// -------------------------------------------------------------------------
 
 	@Test
 	void generate_hasEntityAnnotation() {
@@ -36,7 +32,6 @@ class EntityGeneratorTest {
 
 	@Test
 	void generate_hasTableAnnotationWithDerivedName() {
-		// user.yml: tablePrefix=eb_, entity=User → eb_users
 		String source = generateSource("user.yml");
 
 		assertThat(source).contains("@Table");
@@ -47,41 +42,33 @@ class EntityGeneratorTest {
 	void generate_hasLombokAnnotations() {
 		String source = generateSource("user.yml");
 
-		assertThat(source).contains("@Data");
+		assertThat(source).contains("@Getter");
+		assertThat(source).contains("@Setter");
 		assertThat(source).contains("@NoArgsConstructor");
+		assertThat(source).contains("@AllArgsConstructor");
+		assertThat(source).doesNotContain("callSuper");
 	}
 
-	// -------------------------------------------------------------------------
-	// Inheritance
-	// -------------------------------------------------------------------------
-
 	@Test
-	void generate_extendsBaseEntity_whenAuditEnabled() {
-		// user.yml has audit.enabled: true
+	void generate_doesNotExtendAnyBaseClass() {
 		String source = generateSource("user.yml");
 
-		assertThat(source).contains("extends BaseEntity");
+		assertThat(source).doesNotContain("extends ");
 	}
 
 	@Test
-	void generate_doesNotExtendBaseEntity_whenAuditDisabled() {
-		// post.yml has audit.enabled: false
-		String source = generateSource("post.yml");
-
-		assertThat(source).doesNotContain("extends BaseEntity");
-	}
-
-	@Test
-	void generate_hasStandaloneIdField_whenAuditDisabled() {
-		// When not extending BaseEntity, @Id must be declared directly in the entity
-		String source = generateSource("post.yml");
+	void generate_hasIdField() {
+		String source = generateSource("user.yml");
 
 		assertThat(source).contains("@Id");
 	}
 
-	// -------------------------------------------------------------------------
-	// Field-level annotations
-	// -------------------------------------------------------------------------
+	@Test
+	void generate_hasIdFieldEvenWhenAuditDisabled() {
+		String source = generateSource("post.yml");
+
+		assertThat(source).contains("@Id");
+	}
 
 	@Test
 	void generate_fieldHasColumnAnnotation() {
@@ -92,7 +79,6 @@ class EntityGeneratorTest {
 
 	@Test
 	void generate_requiredField_hasNullableFalse() {
-		// email is required: true in user.yml
 		String source = generateSource("user.yml");
 
 		assertThat(source).contains("nullable = false");
@@ -100,7 +86,6 @@ class EntityGeneratorTest {
 
 	@Test
 	void generate_fieldWithMaxLength_hasLengthConstraint() {
-		// email maxLength: 255 in user.yml
 		String source = generateSource("user.yml");
 
 		assertThat(source).contains("length = 255");
@@ -108,101 +93,80 @@ class EntityGeneratorTest {
 
 	@Test
 	void generate_uniqueField_hasUniqueConstraint() {
-		// email unique: true in user.yml
 		String source = generateSource("user.yml");
 
 		assertThat(source).contains("unique = true");
 	}
 
-	// -------------------------------------------------------------------------
-	// MANY_TO_ONE relationship
-	// -------------------------------------------------------------------------
-
 	@Test
-	void generate_hasManyToOneAnnotation() {
+	void generate_auditFieldsInline_whenAuditEnabled() {
 		String source = generateSource("user.yml");
 
-		assertThat(source).contains("@ManyToOne");
+		assertThat(source).contains("private Instant createdAt");
+		assertThat(source).contains("private Instant updatedAt");
+		assertThat(source).contains("UUID createdBy");
+		assertThat(source).contains("UUID updatedBy");
 	}
 
 	@Test
-	void generate_manyToOne_hasJoinColumnWithFkColumnName() {
+	void generate_hasCreationTimestampAnnotation_whenAuditEnabled() {
 		String source = generateSource("user.yml");
 
-		assertThat(source).contains("@JoinColumn");
+		assertThat(source).contains("@CreationTimestamp");
+		assertThat(source).contains("@UpdateTimestamp");
+	}
+
+	@Test
+	void generate_softDeleteFieldInline_whenSoftDeleteEnabled() {
+		String source = generateSource("user.yml");
+
+		assertThat(source).contains("private Boolean deleted");
+	}
+
+	@Test
+	void generate_hasNoAuditFields_whenAuditDisabled() {
+		String source = generateSource("post.yml");
+
+		assertThat(source).doesNotContain("createdAt");
+		assertThat(source).doesNotContain("deleted");
+	}
+
+	@Test
+	void generate_oneToOne_hasPlainFkColumnField() {
+		String source = generateSource("user.yml");
+
 		assertThat(source).contains("tenant_id");
+		assertThat(source).contains("UUID tenantId");
 	}
 
 	@Test
-	void generate_manyToOne_hasForeignKeyConstraintName() {
+	void generate_oneToOne_hasNoManyToOneAnnotation() {
 		String source = generateSource("user.yml");
 
-		assertThat(source).contains("fk_eb_users_tenant_id");
+		assertThat(source).doesNotContain("@ManyToOne");
 	}
 
 	@Test
-	void generate_manyToOne_fieldTypeIsRelatedEntity() {
+	void generate_oneToOne_hasNoJoinColumnAnnotation() {
 		String source = generateSource("user.yml");
 
-		assertThat(source).contains("TenantEntity");
+		assertThat(source).doesNotContain("@JoinColumn");
 	}
 
-	// -------------------------------------------------------------------------
-	// ONE_TO_MANY relationship
-	// -------------------------------------------------------------------------
-
 	@Test
-	void generate_hasOneToManyAnnotation() {
+	void generate_oneToOne_hasNoOneToManyAnnotation() {
 		String source = generateSource("user.yml");
 
-		assertThat(source).contains("@OneToMany");
+		assertThat(source).doesNotContain("@OneToMany");
 	}
 
 	@Test
-	void generate_oneToMany_hasMappedByAttribute() {
-		String source = generateSource("user.yml");
-
-		assertThat(source).contains("mappedBy");
-		assertThat(source).contains("user");
-	}
-
-	@Test
-	void generate_oneToMany_hasAddHelperMethod() {
-		String source = generateSource("user.yml");
-
-		assertThat(source).contains("addPost(");
-	}
-
-	@Test
-	void generate_oneToMany_hasRemoveHelperMethod() {
-		String source = generateSource("user.yml");
-
-		assertThat(source).contains("removePost(");
-	}
-
-	@Test
-	void generate_oneToMany_fieldIsInitializedAsList() {
-		String source = generateSource("user.yml");
-
-		// Collection should be initialized to avoid NPE
-		assertThat(source).contains("new ArrayList");
-	}
-
-	// -------------------------------------------------------------------------
-	// Output path
-	// -------------------------------------------------------------------------
-
-	@Test
-	void generate_outputPathIsInPersistencePackage() {
+	void generate_outputPathIsInDomainEntityPackage() {
 		List<GeneratedArtifact> artifacts = generate("user.yml");
 
 		assertThat(artifacts).hasSize(1);
-		assertThat(artifacts.get(0).outputPath().toString()).endsWith("persistence/UserEntity.java");
+		assertThat(artifacts.get(0).outputPath().toString()).endsWith("user/domain/entity/UserEntity.java");
 	}
-
-	// -------------------------------------------------------------------------
-	// Helpers
-	// -------------------------------------------------------------------------
 
 	private String generateSource(String yamlResource) {
 		List<GeneratedArtifact> artifacts = generate(yamlResource);

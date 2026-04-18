@@ -18,7 +18,7 @@
                 <artifactId>easybase-maven-plugin</artifactId>
                 <version>@project.version@</version>
                 <configuration>
-                    <entityConfigFile>${project.basedir}/easybase.yml</entityConfigFile>
+                    <serviceConfigFile>${project.basedir}/src/main/resources/service.yml</serviceConfigFile>
                     <projectConfigFile>${project.basedir}/easybase-config.yaml</projectConfigFile>
                     <outputDirectory>${project.build.directory}/generated-sources/easybase</outputDirectory>
                 </configuration>

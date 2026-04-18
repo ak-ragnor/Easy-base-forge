@@ -1,6 +1,17 @@
 entity: Post
 basePackage: com.example.app
-idType: UUID
+
+id:
+  type: UUID
+
+audit:
+  enabled: false
+
+softDelete:
+  enabled: false
+
+tenant:
+  enabled: false
 
 fields:
   - name: title
@@ -9,9 +20,6 @@ fields:
     maxLength: 500
   - name: content
     type: String
-
-audit:
-  enabled: false
 
 crud:
   create: true

@@ -3,65 +3,24 @@ package com.easybase.forge.core.service.config;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Describes one JPA relationship on a generated entity.
- *
- * <p>Example YAML:
- * <pre>
- * relationships:
- *   - type: MANY_TO_ONE
- *     entity: Tenant
- *     field: tenant
- *     column: tenant_id
- *     nullable: false
- *     fetch: LAZY
- *     cascade: []
- *     foreignKey: fk_user_tenant
- *   - type: ONE_TO_MANY
- *     entity: UserCredential
- *     field: credentials
- *     mappedBy: user
- *     cascade: [ALL]
- *     fetch: LAZY
- * </pre>
- */
 public class RelationshipConfig {
 
-	/** Relationship type: {@code MANY_TO_ONE}, {@code ONE_TO_MANY}, or {@code ONE_TO_ONE}. */
 	private RelationType type;
 
-	/** Simple class name of the related entity (e.g. {@code Tenant}). */
 	private String entity;
 
-	/** Java field name on this entity's JPA class (e.g. {@code tenant}). */
 	private String field;
 
-	/**
-	 * Database column name for the foreign key (owning side).
-	 * Auto-derived as {@code snake_case(field) + "_id"} when not set.
-	 * Not applicable for {@code ONE_TO_MANY} (non-owning side).
-	 */
 	private String column;
 
-	/** Whether the foreign key column allows null. Default: {@code true}. */
 	private boolean nullable = true;
 
-	/** JPA fetch strategy. Default: {@link FetchStrategy#LAZY}. */
-	private FetchStrategy fetch = FetchStrategy.LAZY;
+	private String idType;
 
-	/** Cascade operations. Empty list means no cascading. */
 	private List<CascadeStrategy> cascade = new ArrayList<>();
 
-	/**
-	 * Database foreign key constraint name.
-	 * Auto-derived as {@code "fk_" + ownerTable + "_" + column} when not set.
-	 */
 	private String foreignKey;
 
-	/**
-	 * The field on the related entity that maps back to this entity.
-	 * Required for {@code ONE_TO_MANY} ({@code mappedBy} attribute).
-	 */
 	private String mappedBy;
 
 	public RelationType getType() {
@@ -104,12 +63,12 @@ public class RelationshipConfig {
 		this.nullable = nullable;
 	}
 
-	public FetchStrategy getFetch() {
-		return fetch;
+	public String getIdType() {
+		return idType;
 	}
 
-	public void setFetch(FetchStrategy fetch) {
-		this.fetch = fetch;
+	public void setIdType(String idType) {
+		this.idType = idType;
 	}
 
 	public List<CascadeStrategy> getCascade() {

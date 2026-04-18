@@ -1,0 +1,48 @@
+modules:
+  - name: user
+    entities:
+      - name: User
+        tablePrefix: eb_
+
+        id:
+          type: UUID
+
+        audit:
+          enabled: true
+          auditorType: UUID
+
+        softDelete:
+          enabled: true
+
+        tenant:
+          enabled: false
+
+        fields:
+          - name: email
+            type: String
+            required: true
+            maxLength: 255
+            unique: true
+          - name: firstName
+            type: String
+            maxLength: 100
+          - name: lastName
+            type: String
+            maxLength: 100
+
+        relationships:
+          - type: ONE_TO_ONE
+            column: tenant_id
+            nullable: false
+            idType: UUID
+
+        crud:
+          create: true
+          update: true
+          delete: true
+          get: true
+          list: true
+
+        hook:
+          enabled: true
+          multiple: true

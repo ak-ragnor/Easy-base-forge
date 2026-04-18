@@ -5,128 +5,133 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import com.easybase.forge.core.service.config.ServiceConfig;
+import com.easybase.forge.core.service.config.ServiceLayoutResolver;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.TypeName;
+import com.squareup.javapoet.TypeSpec;
 
-/**
- * Shared utilities for all Service Builder generators.
- *
- * <p>Provides package resolution, type mapping, and naming convention helpers
- * used consistently across every generator.
- */
 public final class ServiceGeneratorUtils {
 
 	private ServiceGeneratorUtils() {
 		throw new UnsupportedOperationException("Utility class");
 	}
 
-	// -------------------------------------------------------------------------
-	// Package and path resolution
-	// -------------------------------------------------------------------------
-
-	/** Returns the fully-qualified package for domain model classes. */
-	public static String modelPackage(ServiceConfig config) {
-		return config.getBasePackage() + ".model";
+	public static String domainModelPackage(ServiceConfig config) {
+		return resolve(config.getResolvedStructure().getModel(), config);
 	}
 
-	/** Returns the fully-qualified package for repository interfaces. */
+	public static String domainEntityPackage(ServiceConfig config) {
+		return resolve(config.getResolvedStructure().getEntity(), config);
+	}
+
+	public static String repositoryBasePackage(ServiceConfig config) {
+		return resolve(config.getResolvedStructure().getRepositoryBase(), config);
+	}
+
 	public static String repositoryPackage(ServiceConfig config) {
-		return config.getBasePackage() + ".repository";
+		return resolve(config.getResolvedStructure().getRepository(), config);
 	}
 
-	/** Returns the fully-qualified package for persistence classes (JPA entities, adapters). */
+	public static String jpaRepositoryBasePackage(ServiceConfig config) {
+		return resolve(config.getResolvedStructure().getJpaRepositoryBase(), config);
+	}
+
+	public static String jpaRepositoryPackage(ServiceConfig config) {
+		return resolve(config.getResolvedStructure().getJpaRepository(), config);
+	}
+
+	public static String persistenceBasePackage(ServiceConfig config) {
+		return resolve(config.getResolvedStructure().getPersistenceAdapterBase(), config);
+	}
+
 	public static String persistencePackage(ServiceConfig config) {
-		return config.getBasePackage() + ".persistence";
+		return resolve(config.getResolvedStructure().getPersistenceAdapter(), config);
 	}
 
-	/** Returns the fully-qualified package for the base service layer. */
-	public static String baseServicePackage(ServiceConfig config) {
-		return config.getBasePackage() + ".service.base";
+	public static String hookBasePackage(ServiceConfig config) {
+		return resolve(config.getResolvedStructure().getHookBase(), config);
 	}
 
-	/** Returns the fully-qualified package for the developer-owned service layer. */
-	public static String servicePackage(ServiceConfig config) {
-		return config.getBasePackage() + ".service";
-	}
-
-	/** Returns the fully-qualified package for hook interfaces and implementations. */
 	public static String hookPackage(ServiceConfig config) {
-		return config.getBasePackage() + ".hook";
+		return resolve(config.getResolvedStructure().getHook(), config);
 	}
 
-	/** Converts a dot-separated package name to a filesystem {@link Path} under the given base. */
-	public static Path packageToPath(Path base, String packageName) {
-		return base.resolve(packageName.replace('.', '/'));
+	public static String serviceBasePackage(ServiceConfig config) {
+		return resolve(config.getResolvedStructure().getServiceBase(), config);
 	}
 
-	// -------------------------------------------------------------------------
-	// Naming conventions
-	// -------------------------------------------------------------------------
+	public static String servicePackage(ServiceConfig config) {
+		return resolve(config.getResolvedStructure().getService(), config);
+	}
 
-	/** Returns the entity name in PascalCase (e.g. {@code User}). */
 	public static String entityName(ServiceConfig config) {
 		return config.getEntity();
 	}
 
-	/** Returns the entity name with {@code Entity} suffix (e.g. {@code UserEntity}). */
 	public static String entityClassName(ServiceConfig config) {
 		return config.getEntity() + "Entity";
 	}
 
-	/** Returns the Spring Data JPA repository name (e.g. {@code UserJpaRepository}). */
-	public static String jpaRepositoryName(ServiceConfig config) {
-		return config.getEntity() + "JpaRepository";
+	public static String repositoryBaseName(ServiceConfig config) {
+		return config.getEntity() + "RepositoryBase";
 	}
 
-	/** Returns the domain repository interface name (e.g. {@code UserRepository}). */
 	public static String repositoryName(ServiceConfig config) {
 		return config.getEntity() + "Repository";
 	}
 
-	/** Returns the persistence adapter class name (e.g. {@code UserPersistenceAdapter}). */
+	public static String jpaRepositoryBaseName(ServiceConfig config) {
+		return config.getEntity() + "JpaRepositoryBase";
+	}
+
+	public static String jpaRepositoryName(ServiceConfig config) {
+		return config.getEntity() + "JpaRepository";
+	}
+
+	public static String persistenceAdapterBaseName(ServiceConfig config) {
+		return config.getEntity() + "PersistenceAdapterBase";
+	}
+
 	public static String persistenceAdapterName(ServiceConfig config) {
 		return config.getEntity() + "PersistenceAdapter";
 	}
 
-	/** Returns the base service interface name (e.g. {@code UserBaseService}). */
-	public static String baseServiceName(ServiceConfig config) {
-		return config.getEntity() + "BaseService";
+	public static String hookBaseName(ServiceConfig config) {
+		return config.getEntity() + "HookBase";
 	}
 
-	/** Returns the abstract base service implementation name (e.g. {@code UserBaseServiceImpl}). */
-	public static String baseServiceImplName(ServiceConfig config) {
-		return config.getEntity() + "BaseServiceImpl";
-	}
-
-	/** Returns the developer-owned service interface name (e.g. {@code UserService}). */
-	public static String serviceName(ServiceConfig config) {
-		return config.getEntity() + "Service";
-	}
-
-	/** Returns the developer-owned service implementation name (e.g. {@code UserServiceImpl}). */
-	public static String serviceImplName(ServiceConfig config) {
-		return config.getEntity() + "ServiceImpl";
-	}
-
-	/** Returns the hook interface name (e.g. {@code UserHook}). */
 	public static String hookName(ServiceConfig config) {
 		return config.getEntity() + "Hook";
 	}
 
-	/** Returns the developer-owned hook implementation name (e.g. {@code UserHookImpl}). */
-	public static String hookImplName(ServiceConfig config) {
-		return config.getEntity() + "HookImpl";
+	public static String serviceBaseName(ServiceConfig config) {
+		return config.getEntity() + "ServiceBase";
 	}
 
-	/**
-	 * Derives the JPA table name from the entity name.
-	 *
-	 * <p>Applies the configured prefix and converts PascalCase to lower_snake_case.
-	 * For example: {@code "User"} with prefix {@code "eb_"} → {@code "eb_users"}.
-	 */
+	public static String serviceBaseImplName(ServiceConfig config) {
+		return config.getEntity() + "ServiceBaseImpl";
+	}
+
+	public static String localServiceBaseName(ServiceConfig config) {
+		return config.getEntity() + "LocalServiceBase";
+	}
+
+	public static String localServiceBaseImplName(ServiceConfig config) {
+		return config.getEntity() + "LocalServiceBaseImpl";
+	}
+
+	public static String localServiceName(ServiceConfig config) {
+		return config.getEntity() + "LocalService";
+	}
+
+	public static String serviceName(ServiceConfig config) {
+		return config.getEntity() + "Service";
+	}
+
 	public static String tableName(ServiceConfig config) {
 		String snake = toSnakeCase(config.getEntity());
 		String prefix = config.getTablePrefix();
@@ -138,12 +143,6 @@ public final class ServiceGeneratorUtils {
 		return prefix + snake + "s";
 	}
 
-	/**
-	 * Converts a camelCase or PascalCase name to lower_snake_case.
-	 *
-	 * <p>For example: {@code "tenantId"} → {@code "tenant_id"},
-	 * {@code "UserProfile"} → {@code "user_profile"}.
-	 */
 	public static String toSnakeCase(String name) {
 		StringBuilder result = new StringBuilder();
 
@@ -160,38 +159,18 @@ public final class ServiceGeneratorUtils {
 		return result.toString();
 	}
 
-	/**
-	 * Derives a foreign key column name from a relationship field name.
-	 *
-	 * <p>For example: {@code "tenant"} → {@code "tenant_id"}.
-	 */
 	public static String deriveForeignKeyColumn(String fieldName) {
 		return toSnakeCase(fieldName) + "_id";
 	}
 
-	/**
-	 * Derives a foreign key constraint name from the table name and column name.
-	 *
-	 * <p>For example: table {@code "eb_users"}, column {@code "tenant_id"} → {@code "fk_eb_users_tenant_id"}.
-	 */
 	public static String deriveForeignKeyName(String tableName, String columnName) {
 		return "fk_" + tableName + "_" + columnName;
 	}
 
-	// -------------------------------------------------------------------------
-	// Type resolution
-	// -------------------------------------------------------------------------
+	public static Path packageToPath(Path base, String packageName) {
+		return base.resolve(packageName.replace('.', '/'));
+	}
 
-	/**
-	 * Resolves a Java type string to a JavaPoet {@link TypeName}.
-	 *
-	 * <p>Supports all primitive wrapper types, common JDK types, and
-	 * unknown types resolved against the given package.
-	 *
-	 * @param javaType   the type name (e.g. {@code "UUID"}, {@code "String"})
-	 * @param contextPkg the package to use for unknown (domain) types
-	 * @return the corresponding JavaPoet {@link TypeName}
-	 */
 	public static TypeName resolveType(String javaType, String contextPkg) {
 		if (javaType == null || javaType.isBlank()) {
 			return TypeName.VOID;
@@ -236,13 +215,29 @@ public final class ServiceGeneratorUtils {
 		return ClassName.get(contextPkg, javaType);
 	}
 
-	/**
-	 * Resolves the primary key {@link TypeName} based on the configured {@code idType}.
-	 *
-	 * @param config the service configuration
-	 * @return the JavaPoet {@link TypeName} for the primary key
-	 */
 	public static TypeName resolveIdType(ServiceConfig config) {
 		return resolveType(config.getIdType(), config.getBasePackage());
+	}
+
+	public static String fieldName(ServiceConfig config, String suffix) {
+		String name = config.getEntity();
+		return Character.toLowerCase(name.charAt(0)) + name.substring(1) + suffix;
+	}
+
+	public static void applyAuthors(TypeSpec.Builder builder, ServiceConfig config) {
+		List<String> authors = config.getResolvedAuthors();
+		if (authors == null || authors.isEmpty()) {
+			return;
+		}
+		StringBuilder javadoc = new StringBuilder();
+		for (String author : authors) {
+			javadoc.append("\n@author ").append(author);
+		}
+		builder.addJavadoc(javadoc.toString());
+	}
+
+	private static String resolve(String pattern, ServiceConfig config) {
+		return ServiceLayoutResolver.resolve(
+				pattern, config.getBasePackage(), config.getModuleName(), config.getLayout());
 	}
 }

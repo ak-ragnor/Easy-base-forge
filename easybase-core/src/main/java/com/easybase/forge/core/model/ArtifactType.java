@@ -20,45 +20,56 @@ public enum ArtifactType {
 	/** User-owned delegate implementation extending the base — only created, never overwritten. */
 	DELEGATE_IMPL(false),
 
-	// -------------------------------------------------------------------------
-	// Service Builder artifact types
-	// -------------------------------------------------------------------------
+	/** Generated domain model base POJO (all generated fields) — always overwritten. */
+	SERVICE_MODEL_BASE(true),
 
-	/** Generated @MappedSuperclass with audit fields — always overwritten. */
-	SERVICE_BASE_ENTITY(true),
+	/** Developer-owned domain model shell extending the base — only created, never overwritten. */
+	SERVICE_MODEL(false),
 
-	/** Generated immutable domain record — always overwritten. */
-	SERVICE_MODEL(true),
-
-	/** Generated repository interface extending BaseRepository — always overwritten. */
-	SERVICE_REPOSITORY(true),
-
-	/** Generated Spring Data JpaRepository interface — always overwritten. */
-	SERVICE_JPA_REPOSITORY(true),
-
-	/** Generated @Entity class — always overwritten. */
+	/** Generated @Entity JPA class — always overwritten. */
 	SERVICE_ENTITY(true),
 
-	/** Generated persistence adapter implementing the repository — always overwritten. */
-	SERVICE_PERSISTENCE_ADAPTER(true),
+	/** Generated base repository interface extending BaseRepository — always overwritten. */
+	SERVICE_REPOSITORY_BASE(true),
 
-	/** Generated base service interface — always overwritten. */
-	SERVICE_BASE_SERVICE(true),
+	/** Developer-owned repository extending the base — only created, never overwritten. */
+	SERVICE_REPOSITORY(false),
 
-	/** Generated abstract base service implementation with hook wiring — always overwritten. */
-	SERVICE_BASE_SERVICE_IMPL(true),
+	/** Generated @NoRepositoryBean Spring Data JPA base interface — always overwritten. */
+	SERVICE_JPA_REPOSITORY_BASE(true),
 
-	/** Developer-owned service interface — only created, never overwritten. */
-	SERVICE_USER_SERVICE(false),
+	/** Developer-owned Spring Data JPA repository — only created, never overwritten. */
+	SERVICE_JPA_REPOSITORY(false),
 
-	/** Developer-owned service implementation — only created, never overwritten. */
-	SERVICE_USER_SERVICE_IMPL(false),
+	/** Generated abstract persistence adapter base with hook wiring — always overwritten. */
+	SERVICE_PERSISTENCE_ADAPTER_BASE(true),
 
-	/** Generated hook interface — always overwritten. */
-	SERVICE_HOOK(true),
+	/** Developer-owned persistence adapter extending the base — only created, never overwritten. */
+	SERVICE_PERSISTENCE_ADAPTER(false),
+
+	/** Generated lifecycle hook base interface — always overwritten. */
+	SERVICE_HOOK_BASE(true),
 
 	/** Developer-owned hook implementation — only created, never overwritten. */
-	SERVICE_HOOK_IMPL(false);
+	SERVICE_HOOK(false),
+
+	/** Generated base service interface declaring enabled CRUD operations — always overwritten. */
+	SERVICE_SERVICE_BASE(true),
+
+	/** Generated abstract base service implementation — always overwritten. */
+	SERVICE_SERVICE_BASE_IMPL(true),
+
+	/** Generated local service base interface extending the service base — always overwritten. */
+	SERVICE_LOCAL_SERVICE_BASE(true),
+
+	/** Generated abstract local service base implementation — always overwritten. */
+	SERVICE_LOCAL_SERVICE_BASE_IMPL(true),
+
+	/** Developer-owned local service (@Service) — only created, never overwritten. */
+	SERVICE_LOCAL_SERVICE(false),
+
+	/** Developer-owned service façade (@Component) — only created, never overwritten. */
+	SERVICE_SERVICE(false);
 
 	private final boolean alwaysOverwrite;
 

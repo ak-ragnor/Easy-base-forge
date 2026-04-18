@@ -16,28 +16,18 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
-/**
- * CLI command for generating a Spring Boot service layer from a per-entity {@code easybase.yml}.
- *
- * <p>Usage:
- * <pre>
- *   easybase build-service easybase.yml
- *   easybase build-service easybase.yml -o src/main/java
- *   easybase build-service easybase.yml -p easybase-config.yaml --dry-run
- * </pre>
- */
 @Command(
 		name = "build-service",
-		description = "Generate Spring Boot service layer from an easybase.yml entity spec.",
+		description = "Generate Spring Boot service layer from a service.yml spec.",
 		mixinStandardHelpOptions = true)
 public class BuildServiceCommand implements Callable<Integer> {
 
-	@Parameters(index = "0", description = "Path to the easybase.yml entity config file.")
-	private File entityConfigFile;
+	@Parameters(index = "0", description = "Path to the service.yml config file.", defaultValue = "src/main/resources/service.yml")
+	private File serviceConfigFile;
 
 	@Option(
 			names = {"-p", "--project-config"},
-			description = "Path to easybase-config.yaml. Provides shared defaults (audit, basePackage)."
+			description = "Path to easybase-config.yaml. Provides shared defaults (basePackage)."
 					+ " Default: ./easybase-config.yaml",
 			defaultValue = "easybase-config.yaml")
 	private File projectConfigFile;
@@ -55,71 +45,92 @@ public class BuildServiceCommand implements Callable<Integer> {
 
 	@Override
 	public Integer call() {
-		if (!entityConfigFile.exists()) {
-			System.err.println("Error: entity config file not found: " + entityConfigFile.getAbsolutePath());
-			System.err.println("Create an easybase.yml with at least:");
-			System.err.println("  entity: MyEntity");
+		if (!serviceConfigFile.exists()) {
+			System.err.println("Error: service config file not found: " + serviceConfigFile.getAbsolutePath());
+			System.err.println("Create a service.yml with at least:");
 			System.err.println("  basePackage: com.example.app");
-
+			System.err.println("  modules:");
+			System.err.println("    - name: mymodule");
+			System.err.println("      entities:");
+			System.err.println("        - name: MyEntity");
 			return 1;
 		}
 
-		ServiceConfig config;
+		List<ServiceConfig> configs;
 
 		try {
-			Path projectConfigPath = projectConfigFile.exists() ? projectConfigFile.toPath() : null;
-			config = ServiceConfigLoader.load(projectConfigPath, entityConfigFile.toPath(), outputDirectory.toPath());
+			Path projectConfigPath = null;
+
+			if (projectConfigFile.exists()) {
+				projectConfigPath = projectConfigFile.toPath();
+			}
+
+			configs = ServiceConfigLoader.loadAll(
+					projectConfigPath, serviceConfigFile.toPath(), outputDirectory.toPath());
 		} catch (ConfigException e) {
 			System.err.println("Error: " + e.getMessage());
 			return 1;
 		}
 
 		if (dryRun) {
-			return runDryRun(config);
+			return runDryRun(configs);
 		}
 
-		try {
-			GenerationReport report = new ServiceEngine(config).generate();
-			printReport(report);
+		int exitCode = 0;
 
-			if (report.hasErrors()) {
-				return 1;
+		for (ServiceConfig config : configs) {
+			try {
+				GenerationReport report = new ServiceEngine(config).generate();
+
+				printReport(config, report);
+
+				if (report.hasErrors()) {
+					exitCode = 1;
+				}
+			} catch (Exception e) {
+				System.err.println(
+						"Error: service generation failed for entity " + config.getEntity() + ": " + e.getMessage());
+				exitCode = 1;
 			}
-
-			return 0;
-		} catch (Exception e) {
-			System.err.println("Error: service generation failed: " + e.getMessage());
-			return 1;
 		}
+
+		return exitCode;
 	}
 
-	private int runDryRun(ServiceConfig config) {
+	private int runDryRun(List<ServiceConfig> configs) {
 		System.out.println("[DRY RUN] Would generate the following files:");
 
-		try {
-			List<GenerationUnit> units = new ServiceEngine(config).plan();
+		int total = 0;
 
-			for (GenerationUnit unit : units) {
-				String action = unit.overwrite() ? "CREATE/UPDATE" : "CREATE (skip if exists)";
-				System.out.printf("  [%-20s] %s%n", action, unit.outputPath());
+		for (ServiceConfig config : configs) {
+			try {
+				List<GenerationUnit> units = new ServiceEngine(config).plan();
+
+				for (GenerationUnit unit : units) {
+					String action = unit.overwrite() ? "CREATE/UPDATE" : "CREATE (skip if exists)";
+					System.out.printf("  [%-20s] %s%n", action, unit.outputPath());
+				}
+
+				total += units.size();
+			} catch (Exception e) {
+				System.err.println("Error: " + e.getMessage());
+				return 1;
 			}
-
-			System.out.println("[DRY RUN] Total: " + units.size() + " file(s).");
-			return 0;
-		} catch (Exception e) {
-			System.err.println("Error: " + e.getMessage());
-			return 1;
 		}
+
+		System.out.println("[DRY RUN] Total: " + total + " file(s).");
+		return 0;
 	}
 
-	private static void printReport(GenerationReport report) {
+	private static void printReport(ServiceConfig config, GenerationReport report) {
 		report.created().forEach(p -> System.out.println("[CREATED] " + p));
 		report.updated().forEach(p -> System.out.println("[UPDATED] " + p));
 		report.skipped().forEach(p -> System.out.println("[SKIPPED] " + p));
 		report.errors().forEach(e -> System.err.println("[ERROR]   " + e));
 
 		System.out.printf(
-				"%nDone: %d created, %d updated, %d skipped, %d errors.%n",
+				"%nEntity %s: %d created, %d updated, %d skipped, %d errors.%n",
+				config.getEntity(),
 				report.created().size(),
 				report.updated().size(),
 				report.skipped().size(),

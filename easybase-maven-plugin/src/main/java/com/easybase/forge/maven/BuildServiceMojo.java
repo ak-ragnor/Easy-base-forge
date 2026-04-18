@@ -2,6 +2,7 @@ package com.easybase.forge.maven;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
@@ -18,10 +19,7 @@ import com.easybase.forge.core.writer.GenerationReport;
 
 /**
  * Generates the Spring Boot service layer (domain model, repository, persistence adapter,
- * base service, service impl, hooks) from a per-entity {@code easybase.yml} spec.
- *
- * <p>Project-level defaults (audit config, soft-delete settings) are read from
- * {@code easybase-config.yaml} when present in the project root.
+ * base service, service impl, hooks) from a {@code service.yml} spec.
  *
  * <p>Example usage in a project's {@code pom.xml}:
  * <pre>{@code
@@ -31,10 +29,10 @@ import com.easybase.forge.core.writer.GenerationReport;
  *   <version>0.1.0-SNAPSHOT</version>
  *   <executions>
  *     <execution>
- *       <id>generate-user-service</id>
+ *       <id>generate-service</id>
  *       <goals><goal>build-service</goal></goals>
  *       <configuration>
- *         <entityConfigFile>${project.basedir}/easybase.yml</entityConfigFile>
+ *         <serviceConfigFile>${project.basedir}/src/main/resources/service.yml</serviceConfigFile>
  *       </configuration>
  *     </execution>
  *   </executions>
@@ -45,15 +43,15 @@ import com.easybase.forge.core.writer.GenerationReport;
 public class BuildServiceMojo extends AbstractMojo {
 
 	/**
-	 * Path to the per-entity {@code easybase.yml} configuration file.
-	 * Defaults to {@code easybase.yml} in the project base directory.
+	 * Path to the {@code service.yml} configuration file.
+	 * Defaults to {@code service.yml} in the project base directory.
 	 */
-	@Parameter(defaultValue = "${project.basedir}/easybase.yml")
-	private File entityConfigFile;
+	@Parameter(defaultValue = "${project.basedir}/src/main/resources/service.yml")
+	private File serviceConfigFile;
 
 	/**
 	 * Path to the project-level {@code easybase-config.yaml} configuration file.
-	 * Provides shared defaults (audit settings, basePackage) for all entities.
+	 * Provides shared defaults (basePackage, generate options) for all entities.
 	 * Silently ignored when the file does not exist.
 	 */
 	@Parameter(defaultValue = "${project.basedir}/easybase-config.yaml")
@@ -61,8 +59,6 @@ public class BuildServiceMojo extends AbstractMojo {
 
 	/**
 	 * Output directory for generated sources.
-	 * When not set, the {@code output.directory} from {@code easybase-config.yaml}
-	 * or the project's default source directory is used.
 	 * Automatically added to the project's compile source roots.
 	 */
 	@Parameter(defaultValue = "${project.build.sourceDirectory}")
@@ -84,52 +80,66 @@ public class BuildServiceMojo extends AbstractMojo {
 
 		validateParameters();
 
-		getLog().info("EasyBase Service Builder: entity config " + entityConfigFile);
+		getLog().info("EasyBase Service Builder: service config " + serviceConfigFile);
 		getLog().info("EasyBase Service Builder: project config " + projectConfigFile);
 
-		ServiceConfig config;
+		List<ServiceConfig> configs;
 
 		try {
-			Path projectConfigPath = projectConfigFile.exists() ? projectConfigFile.toPath() : null;
-			config = ServiceConfigLoader.load(projectConfigPath, entityConfigFile.toPath(), outputDirectory.toPath());
+			Path projectConfigPath = null;
+
+			if (projectConfigFile.exists()) {
+				projectConfigPath = projectConfigFile.toPath();
+			}
+
+			configs = ServiceConfigLoader.loadAll(
+					projectConfigPath, serviceConfigFile.toPath(), outputDirectory.toPath());
 		} catch (ConfigException e) {
 			throw new MojoExecutionException("Failed to load EasyBase service config: " + e.getMessage(), e);
 		}
 
-		Path resolvedOutput = config.getResolvedOutputDirectory();
+		Path resolvedOutput = configs.get(0).getResolvedOutputDirectory();
 
 		getLog().info("EasyBase Service Builder: output " + resolvedOutput);
 
-		GenerationReport report;
+		for (ServiceConfig config : configs) {
+			getLog().info("EasyBase Service Builder: generating entity " + config.getEntity() + " (module: "
+					+ config.getModuleName() + ")");
 
-		try {
-			report = new ServiceEngine(config).generate();
-		} catch (Exception e) {
-			throw new MojoExecutionException("EasyBase service generation failed: " + e.getMessage(), e);
-		}
+			GenerationReport report;
 
-		report.created().forEach(p -> getLog().info("[CREATED] " + p));
-		report.updated().forEach(p -> getLog().info("[UPDATED] " + p));
-		report.skipped().forEach(p -> getLog().info("[SKIPPED] " + p));
-		report.errors().forEach(e -> getLog().error("[ERROR]   " + e));
+			try {
+				report = new ServiceEngine(config).generate();
+			} catch (Exception e) {
+				throw new MojoExecutionException(
+						"EasyBase service generation failed for entity " + config.getEntity() + ": " + e.getMessage(),
+						e);
+			}
 
-		if (report.hasErrors()) {
-			throw new MojoExecutionException(
-					"EasyBase service generation completed with errors: " + report.errorSummary());
+			report.created().forEach(p -> getLog().info("[CREATED] " + p));
+			report.updated().forEach(p -> getLog().info("[UPDATED] " + p));
+			report.skipped().forEach(p -> getLog().info("[SKIPPED] " + p));
+			report.errors().forEach(e -> getLog().error("[ERROR]   " + e));
+
+			if (report.hasErrors()) {
+				throw new MojoExecutionException("EasyBase service generation completed with errors for entity "
+						+ config.getEntity() + ": " + report.errorSummary());
+			}
 		}
 
 		project.addCompileSourceRoot(resolvedOutput.toAbsolutePath().toString());
-
 		getLog().info("EasyBase Service Builder: added " + resolvedOutput + " to compile source roots.");
 	}
 
 	private void validateParameters() throws MojoExecutionException {
-		if (!entityConfigFile.exists()) {
-			throw new MojoExecutionException("easybase.yml not found: " + entityConfigFile.getAbsolutePath()
-					+ "\nCreate an easybase.yml in your project root with at least:\n"
-					+ "  entity: MyEntity\n"
+		if (!serviceConfigFile.exists()) {
+			throw new MojoExecutionException("service.yml not found: " + serviceConfigFile.getAbsolutePath()
+					+ "\nCreate a service.yml in your project root with at least:\n"
 					+ "  basePackage: com.example.app\n"
-					+ "  idType: UUID");
+					+ "  modules:\n"
+					+ "    - name: mymodule\n"
+					+ "      entities:\n"
+					+ "        - name: MyEntity\n");
 		}
 	}
 }

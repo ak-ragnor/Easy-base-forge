@@ -54,18 +54,6 @@
     "allDeclaredFields": true
   },
   {
-    "name": "com.easybase.forge.core.config.ServiceDefaults",
-    "allDeclaredConstructors": true,
-    "allDeclaredMethods": true,
-    "allDeclaredFields": true
-  },
-  {
-    "name": "com.easybase.forge.core.config.AuditDefaults",
-    "allDeclaredConstructors": true,
-    "allDeclaredMethods": true,
-    "allDeclaredFields": true
-  },
-  {
     "name": "com.easybase.forge.core.service.config.ServiceConfig",
     "allDeclaredConstructors": true,
     "allDeclaredMethods": true,

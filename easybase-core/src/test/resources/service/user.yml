@@ -1,7 +1,19 @@
 entity: User
 basePackage: com.example.app
 tablePrefix: eb_
-idType: UUID
+
+id:
+  type: UUID
+
+audit:
+  enabled: true
+  auditorType: UUID
+
+softDelete:
+  enabled: true
+
+tenant:
+  enabled: false
 
 fields:
   - name: email
@@ -14,26 +26,10 @@ fields:
     maxLength: 100
 
 relationships:
-  - type: MANY_TO_ONE
-    entity: Tenant
-    field: tenant
+  - type: ONE_TO_ONE
     column: tenant_id
     nullable: false
-    fetch: LAZY
-    cascade: []
-    foreignKey: fk_eb_users_tenant_id
-  - type: ONE_TO_MANY
-    entity: Post
-    field: posts
-    mappedBy: user
-    cascade: [ALL]
-    fetch: LAZY
-
-audit:
-  enabled: true
-  softDelete: true
-  softDeleteColumn: deleted
-  auditorType: UUID
+    idType: UUID
 
 crud:
   create: true

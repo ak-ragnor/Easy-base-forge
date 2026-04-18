@@ -4,26 +4,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
-import com.easybase.forge.core.config.AuditDefaults;
 import com.easybase.forge.core.config.ConfigException;
 import com.easybase.forge.core.config.GeneratorConfig;
+import com.easybase.forge.core.config.LayoutMode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
-/**
- * Loads and validates a per-entity {@link ServiceConfig} from {@code easybase.yml}.
- *
- * <p>When a {@code projectConfigFile} ({@code easybase-config.yaml}) exists, this loader:
- * <ol>
- *   <li>Reads project-level defaults from its {@code service.audit} block.</li>
- *   <li>Inherits {@code basePackage} when not set in the entity config.</li>
- *   <li>Merges audit fields: entity-level non-null values override project defaults.</li>
- * </ol>
- *
- * <p>The {@code projectConfigFile} is silently skipped when it does not exist, allowing
- * the service builder to work standalone without a REST builder config present.
- */
 public class ServiceConfigLoader {
 
 	private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory()).findAndRegisterModules();
@@ -32,38 +22,22 @@ public class ServiceConfigLoader {
 		throw new UnsupportedOperationException("Utility class");
 	}
 
-	/**
-	 * Loads the entity config without a project config (all audit defaults apply).
-	 *
-	 * @param entityConfigFile path to {@code easybase.yml}
-	 * @param outputDirectory  the output directory for generated sources
-	 * @return a fully loaded and validated {@link ServiceConfig}
-	 */
 	public static ServiceConfig load(Path entityConfigFile, Path outputDirectory) {
 		return load(null, entityConfigFile, outputDirectory);
 	}
 
-	/**
-	 * Loads the entity config and merges project-level defaults from the project config.
-	 *
-	 * @param projectConfigFile path to {@code easybase-config.yaml} (may be {@code null} or non-existent)
-	 * @param entityConfigFile  path to {@code easybase.yml}
-	 * @param outputDirectory   the output directory for generated sources
-	 * @return a fully loaded and validated {@link ServiceConfig}
-	 */
 	public static ServiceConfig load(Path projectConfigFile, Path entityConfigFile, Path outputDirectory) {
 		if (!Files.exists(entityConfigFile)) {
-			throw new ConfigException("Entity config file not found: " + entityConfigFile.toAbsolutePath());
+			throw new ConfigException("Service config file not found: " + entityConfigFile.toAbsolutePath());
 		}
 
 		ServiceConfig config = parseEntityConfig(entityConfigFile);
 		GeneratorConfig projectConfig = loadProjectConfigIfPresent(projectConfigFile);
 
 		applyProjectDefaults(config, projectConfig);
+		applyResolvedGenerateOptions(config, projectConfig);
 
-		ResolvedAuditConfig resolvedAudit = mergeAuditConfig(extractAuditDefaults(projectConfig), config.getAudit());
-
-		config.setResolvedAudit(resolvedAudit);
+		resolveConfig(config);
 		config.setResolvedOutputDirectory(outputDirectory);
 
 		validate(config, entityConfigFile);
@@ -71,19 +45,138 @@ public class ServiceConfigLoader {
 		return config;
 	}
 
+	public static List<ServiceConfig> loadAll(Path serviceYml, Path outputDirectory) {
+		return loadAll(null, serviceYml, outputDirectory);
+	}
+
+	public static List<ServiceConfig> loadAll(Path projectConfigFile, Path serviceYml, Path outputDirectory) {
+		if (!Files.exists(serviceYml)) {
+			throw new ConfigException("Service config file not found: " + serviceYml.toAbsolutePath());
+		}
+
+		ServiceRootConfig root = parseRootConfig(serviceYml);
+		GeneratorConfig projectConfig = loadProjectConfigIfPresent(projectConfigFile);
+
+		String basePackage = projectConfig != null ? projectConfig.getBasePackage() : null;
+		String layout = resolveLayoutFromProjectConfig(projectConfig);
+
+		ServiceStructureConfig structure =
+				root.getStructure() != null ? mergeStructure(root.getStructure()) : new ServiceStructureConfig();
+
+		List<ServiceConfig> result = new ArrayList<>();
+
+		for (ServiceModuleConfig module : root.getModules()) {
+			if (module.getEntities() == null) {
+				continue;
+			}
+
+			for (ServiceEntityConfig entity : module.getEntities()) {
+				ServiceConfig config = toServiceConfig(entity, basePackage, module.getName(), layout, structure);
+
+				applyProjectDefaults(config, projectConfig);
+				applyResolvedGenerateOptions(config, projectConfig);
+				resolveConfig(config);
+				config.setResolvedOutputDirectory(outputDirectory);
+
+				validate(config, serviceYml);
+				result.add(config);
+			}
+		}
+
+		if (result.isEmpty()) {
+			throw new ConfigException("No entities found in service config: " + serviceYml.toAbsolutePath());
+		}
+
+		return result;
+	}
+
+	private static String resolveLayoutFromProjectConfig(GeneratorConfig projectConfig) {
+		if (projectConfig == null
+				|| projectConfig.getOutput() == null
+				|| projectConfig.getOutput().getLayout() == null) {
+			return ServiceLayoutResolver.MULTI_MODULE;
+		}
+
+		LayoutMode mode = projectConfig.getOutput().getLayout();
+		return mode == LayoutMode.FLAT ? ServiceLayoutResolver.FLAT : ServiceLayoutResolver.MULTI_MODULE;
+	}
+
+	private static ServiceConfig toServiceConfig(
+			ServiceEntityConfig entity,
+			String rootBasePackage,
+			String moduleName,
+			String layout,
+			ServiceStructureConfig structure) {
+		ServiceConfig config = new ServiceConfig();
+		config.setEntity(entity.getName());
+		config.setBasePackage(rootBasePackage);
+		config.setTablePrefix(entity.getTablePrefix() != null ? entity.getTablePrefix() : "");
+		config.setId(entity.getId());
+		config.setAudit(entity.getAudit());
+		config.setSoftDelete(entity.getSoftDelete());
+		config.setTenant(entity.getTenant());
+		config.setFields(entity.getFields());
+		config.setRelationships(entity.getRelationships());
+		config.setCrud(entity.getCrud() != null ? entity.getCrud() : new CrudOptions());
+		config.setHook(entity.getHook() != null ? entity.getHook() : new HookOptions());
+		config.setModuleName(moduleName);
+		config.setLayout(layout);
+		config.setResolvedStructure(structure);
+		return config;
+	}
+
+	private static ServiceStructureConfig mergeStructure(ServiceStructureConfig override) {
+		ServiceStructureConfig merged = new ServiceStructureConfig();
+		if (override.getModel() != null) merged.setModel(override.getModel());
+		if (override.getEntity() != null) merged.setEntity(override.getEntity());
+		if (override.getRepositoryBase() != null) merged.setRepositoryBase(override.getRepositoryBase());
+		if (override.getRepository() != null) merged.setRepository(override.getRepository());
+		if (override.getJpaRepositoryBase() != null) merged.setJpaRepositoryBase(override.getJpaRepositoryBase());
+		if (override.getJpaRepository() != null) merged.setJpaRepository(override.getJpaRepository());
+		if (override.getPersistenceAdapterBase() != null)
+			merged.setPersistenceAdapterBase(override.getPersistenceAdapterBase());
+		if (override.getPersistenceAdapter() != null) merged.setPersistenceAdapter(override.getPersistenceAdapter());
+		if (override.getHookBase() != null) merged.setHookBase(override.getHookBase());
+		if (override.getHook() != null) merged.setHook(override.getHook());
+		if (override.getServiceBase() != null) merged.setServiceBase(override.getServiceBase());
+		if (override.getService() != null) merged.setService(override.getService());
+		return merged;
+	}
+
+	private static void resolveConfig(ServiceConfig config) {
+		if (config.getModuleName() == null && config.getEntity() != null) {
+			config.setModuleName(config.getEntity().toLowerCase());
+		}
+
+		if (config.getLayout() == null) {
+			config.setLayout(ServiceLayoutResolver.MULTI_MODULE);
+		}
+
+		if (config.getResolvedStructure() == null) {
+			config.setResolvedStructure(new ServiceStructureConfig());
+		}
+
+		config.setResolvedAudit(resolveAuditConfig(config.getAudit()));
+		config.setResolvedSoftDelete(resolveSoftDeleteConfig(config.getSoftDelete()));
+		config.setResolvedTenant(resolveTenantConfig(config.getTenant()));
+	}
+
 	private static ServiceConfig parseEntityConfig(Path entityConfigFile) {
 		try (InputStream in = Files.newInputStream(entityConfigFile)) {
 			return YAML_MAPPER.readValue(in, ServiceConfig.class);
 		} catch (IOException e) {
-			throw new ConfigException("Failed to parse entity config file: " + entityConfigFile, e);
+			throw new ConfigException("Failed to parse service config file: " + entityConfigFile, e);
 		}
 	}
 
-	/**
-	 * Parses the project config for defaults extraction only — without running
-	 * the full {@link com.easybase.forge.core.config.ConfigLoader} validation
-	 * (which requires {@code output.directory} to be set).
-	 */
+	private static ServiceRootConfig parseRootConfig(Path serviceYml) {
+		try (InputStream in = Files.newInputStream(serviceYml)) {
+			return YAML_MAPPER.readValue(in, ServiceRootConfig.class);
+		} catch (IOException e) {
+			throw new ConfigException("Failed to parse service config file: " + serviceYml, e);
+		}
+	}
+
 	private static GeneratorConfig loadProjectConfigIfPresent(Path projectConfigFile) {
 		if (projectConfigFile == null || !Files.exists(projectConfigFile)) {
 			return null;
@@ -106,46 +199,54 @@ public class ServiceConfigLoader {
 		}
 	}
 
-	private static AuditDefaults extractAuditDefaults(GeneratorConfig projectConfig) {
-		if (projectConfig == null) {
-			return new AuditDefaults();
+	private static void applyResolvedGenerateOptions(ServiceConfig config, GeneratorConfig projectConfig) {
+		if (projectConfig == null || projectConfig.getGenerate() == null) {
+			return;
 		}
 
-		return projectConfig.getService().getAudit();
+		var generate = projectConfig.getGenerate();
+
+		List<String> authors = new ArrayList<>(generate.getAllAuthors());
+		config.setResolvedAuthors(Collections.unmodifiableList(authors));
+		config.setResolvedAddGeneratedAnnotation(generate.isAddGeneratedAnnotation());
+		config.setResolvedSlf4j(generate.isSlf4j());
+		config.setResolvedPostGenerateCommand(generate.getPostGenerateCommand());
 	}
 
-	private static ResolvedAuditConfig mergeAuditConfig(AuditDefaults defaults, AuditConfig override) {
-		boolean enabled = defaults.isEnabled();
-		String auditorType = defaults.getAuditorType();
-		boolean softDelete = defaults.isSoftDelete();
-		String softDeleteColumn = defaults.getSoftDeleteColumn();
-
-		if (override != null) {
-			if (override.getEnabled() != null) {
-				enabled = override.getEnabled();
-			}
-			if (override.getAuditorType() != null) {
-				auditorType = override.getAuditorType();
-			}
-			if (override.getSoftDelete() != null) {
-				softDelete = override.getSoftDelete();
-			}
-			if (override.getSoftDeleteColumn() != null) {
-				softDeleteColumn = override.getSoftDeleteColumn();
-			}
+	private static ResolvedAuditConfig resolveAuditConfig(AuditConfig audit) {
+		if (audit == null || Boolean.FALSE.equals(audit.getEnabled())) {
+			return new ResolvedAuditConfig(false, "UUID");
 		}
 
-		return new ResolvedAuditConfig(enabled, auditorType, softDelete, softDeleteColumn);
+		String auditorType = audit.getAuditorType() != null ? audit.getAuditorType() : "UUID";
+		return new ResolvedAuditConfig(true, auditorType);
 	}
 
-	private static void validate(ServiceConfig config, Path entityConfigFile) {
+	private static ResolvedSoftDeleteConfig resolveSoftDeleteConfig(SoftDeleteConfig softDelete) {
+		if (softDelete == null || Boolean.FALSE.equals(softDelete.getEnabled())) {
+			return new ResolvedSoftDeleteConfig(false);
+		}
+
+		return new ResolvedSoftDeleteConfig(Boolean.TRUE.equals(softDelete.getEnabled()));
+	}
+
+	private static ResolvedTenantConfig resolveTenantConfig(TenantConfig tenant) {
+		if (tenant == null || Boolean.FALSE.equals(tenant.getEnabled())) {
+			return new ResolvedTenantConfig(false, "UUID");
+		}
+
+		String tenantIdType = tenant.getTenantIdType() != null ? tenant.getTenantIdType() : "UUID";
+		return new ResolvedTenantConfig(Boolean.TRUE.equals(tenant.getEnabled()), tenantIdType);
+	}
+
+	private static void validate(ServiceConfig config, Path configFile) {
 		if (config.getEntity() == null || config.getEntity().isBlank()) {
-			throw new ConfigException("'entity' is required in " + entityConfigFile);
+			throw new ConfigException("'entity' (or 'name' in multi-entity format) is required in " + configFile);
 		}
 
 		if (config.getBasePackage() == null || config.getBasePackage().isBlank()) {
 			throw new ConfigException(
-					"'basePackage' is required. Set it in " + entityConfigFile + " or in easybase-config.yaml");
+					"'basePackage' is required. Set it in " + configFile + " or in easybase-config.yaml");
 		}
 
 		if (config.getResolvedOutputDirectory() == null) {

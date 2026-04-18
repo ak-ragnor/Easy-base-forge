@@ -27,12 +27,11 @@ import com.easybase.forge.core.config.layout.LayoutStrategyFactory;
  *   responseEntityWrapping: ALWAYS
  *   beanValidation: true
  *   pagination: NONE
- * service:
- *   audit:
- *     enabled: true
- *     auditorType: UUID
- *     softDelete: true
- *     softDeleteColumn: deleted
+ *   addGeneratedAnnotation: true
+ *   authors:
+ *     - "EasyBase Demo"
+ *   slf4j: false
+ *   postGenerateCommand: "echo done"
  * </pre>
  */
 public class GeneratorConfig {
@@ -41,7 +40,6 @@ public class GeneratorConfig {
 	private OutputConfig output = new OutputConfig();
 	private StructureConfig structure = new StructureConfig();
 	private GenerateOptions generate = new GenerateOptions();
-	private ServiceDefaults service = new ServiceDefaults();
 
 	private Path resolvedOutputDirectory;
 
@@ -81,14 +79,6 @@ public class GeneratorConfig {
 		this.generate = generate;
 	}
 
-	public ServiceDefaults getService() {
-		return service;
-	}
-
-	public void setService(ServiceDefaults service) {
-		this.service = service;
-	}
-
 	public Path getResolvedOutputDirectory() {
 		return resolvedOutputDirectory;
 	}
@@ -98,11 +88,6 @@ public class GeneratorConfig {
 		return this;
 	}
 
-	/**
-	 * Returns the {@link LayoutStrategy} for this configuration.
-	 *
-	 * <p>Defaults to {@link com.easybase.forge.core.config.layout.FlatLayoutStrategy} when no {@code output.layout} is set.
-	 */
 	public LayoutStrategy getLayoutStrategy() {
 		if (layoutStrategy == null) {
 			LayoutMode mode = LayoutMode.FLAT;
@@ -117,12 +102,6 @@ public class GeneratorConfig {
 		return layoutStrategy;
 	}
 
-	/**
-	 * Resolve a package pattern by substituting {@code {basePackage}}, {@code {resource}},
-	 * and {@code {Resource}} placeholders.
-	 *
-	 * <p>Delegates to {@link #getLayoutStrategy()}.
-	 */
 	public String resolvePackage(String pattern, String resourceName) {
 		return getLayoutStrategy().resolvePackage(pattern, resourceName);
 	}

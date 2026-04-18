@@ -14,28 +14,16 @@ import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeSpec;
 
-/**
- * Generates the base service interface for the configured entity.
- *
- * <p>The generated interface extends {@link com.easybase.service.runtime.BaseService} and
- * re-declares only the CRUD methods that are enabled in {@code crud:} configuration.
- * Disabled methods are simply omitted — the service layer has no dead code.
- *
- * <p>Example output for entity {@code User} with all CRUD enabled:
- * <pre>
- * public interface UserBaseService extends BaseService&lt;User, UUID&gt; {}
- * </pre>
- */
-public class BaseServiceGenerator implements ServiceArtifactGenerator {
+public class ServiceBaseGenerator implements ServiceArtifactGenerator {
 
 	private static final String BASE_SERVICE_PACKAGE = "com.easybase.service.runtime";
 	private static final String BASE_SERVICE_CLASS = "BaseService";
 
 	@Override
 	public List<GeneratedArtifact> generate(ServiceConfig config) {
-		String pkg = ServiceGeneratorUtils.baseServicePackage(config);
-		String baseServiceName = ServiceGeneratorUtils.baseServiceName(config);
-		String modelPkg = ServiceGeneratorUtils.modelPackage(config);
+		String pkg = ServiceGeneratorUtils.serviceBasePackage(config);
+		String serviceBaseName = ServiceGeneratorUtils.serviceBaseName(config);
+		String modelPkg = ServiceGeneratorUtils.domainModelPackage(config);
 		String entityName = ServiceGeneratorUtils.entityName(config);
 
 		ClassName entityType = ClassName.get(modelPkg, entityName);
@@ -43,52 +31,49 @@ public class BaseServiceGenerator implements ServiceArtifactGenerator {
 		ParameterizedTypeName superInterface =
 				ParameterizedTypeName.get(baseService, entityType, ServiceGeneratorUtils.resolveIdType(config));
 
-		TypeSpec.Builder builder = TypeSpec.interfaceBuilder(baseServiceName)
+		TypeSpec.Builder builder = TypeSpec.interfaceBuilder(serviceBaseName)
 				.addModifiers(Modifier.PUBLIC)
 				.addSuperinterface(superInterface)
 				.addJavadoc(
 						"Generated base service interface for {@link $T}.\n\n"
-								+ "<p>Extend {@code $LService} to add business-specific methods.\n"
+								+ "<p>Extend {@code $LLocalService} to add business-specific methods.\n"
 								+ "This interface is always regenerated — do not edit it.\n",
 						entityType,
 						entityName);
 
-		addDisabledCrudWarnings(builder, config.getCrud(), entityName);
+		addDisabledCrudWarnings(builder, config.getCrud());
+		ServiceGeneratorUtils.applyAuthors(builder, config);
 
 		JavaFile javaFile =
 				JavaFile.builder(pkg, builder.build()).skipJavaLangImports(true).build();
 
 		Path outputDir = ServiceGeneratorUtils.packageToPath(config.getResolvedOutputDirectory(), pkg);
-		Path outputPath = outputDir.resolve(baseServiceName + ".java");
+		Path outputPath = outputDir.resolve(serviceBaseName + ".java");
 
-		return List.of(new GeneratedArtifact(outputPath, ArtifactType.SERVICE_BASE_SERVICE, javaFile.toString()));
+		return List.of(new GeneratedArtifact(outputPath, ArtifactType.SERVICE_SERVICE_BASE, javaFile.toString()));
 	}
 
-	/**
-	 * Adds Javadoc notes for any CRUD operations that are disabled in the configuration.
-	 * This documents for developers which methods from {@code BaseService} are unsupported.
-	 */
-	private void addDisabledCrudWarnings(TypeSpec.Builder builder, CrudOptions crud, String entityName) {
+	private void addDisabledCrudWarnings(TypeSpec.Builder builder, CrudOptions crud) {
 		StringBuilder doc = new StringBuilder();
 
 		if (!crud.isCreate()) {
-			doc.append("<p><b>Disabled:</b> {@code _create} — see easybase.yml.\n");
+			doc.append("<p><b>Disabled:</b> {@code create} — see easybase.yml.\n");
 		}
 
 		if (!crud.isUpdate()) {
-			doc.append("<p><b>Disabled:</b> {@code _update} — see easybase.yml.\n");
+			doc.append("<p><b>Disabled:</b> {@code update} — see easybase.yml.\n");
 		}
 
 		if (!crud.isDelete()) {
-			doc.append("<p><b>Disabled:</b> {@code _delete} — see easybase.yml.\n");
+			doc.append("<p><b>Disabled:</b> {@code delete} — see easybase.yml.\n");
 		}
 
 		if (!crud.isGet()) {
-			doc.append("<p><b>Disabled:</b> {@code _get} — see easybase.yml.\n");
+			doc.append("<p><b>Disabled:</b> {@code findById} — see easybase.yml.\n");
 		}
 
 		if (!crud.isList()) {
-			doc.append("<p><b>Disabled:</b> {@code _list} — see easybase.yml.\n");
+			doc.append("<p><b>Disabled:</b> {@code findAll} — see easybase.yml.\n");
 		}
 
 		if (doc.length() > 0) {

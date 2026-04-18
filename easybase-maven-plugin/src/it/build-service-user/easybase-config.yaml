@@ -2,10 +2,3 @@ basePackage: com.example.userservice
 
 output:
   directory: target/generated-sources/easybase
-
-service:
-  audit:
-    enabled: true
-    auditorType: UUID
-    softDelete: true
-    softDeleteColumn: deleted
