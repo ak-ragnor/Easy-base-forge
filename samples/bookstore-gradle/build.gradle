@@ -2,6 +2,7 @@ plugins {
     id 'org.springframework.boot' version '3.3.2'
     id 'io.spring.dependency-management' version '1.1.6'
     id 'java'
+    id 'com.easybase.forge.rest' version '0.1.1'
 }
 
 group = 'com.example'
@@ -25,6 +26,12 @@ dependencies {
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+easybase {
+    specFile = file('src/main/resources/api.yaml')
+    configFile = file('easybase-config.yaml')
+    outputDirectory = file('src/main/java')
 }
 
 test {

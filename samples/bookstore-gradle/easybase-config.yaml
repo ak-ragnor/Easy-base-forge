@@ -1,0 +1,12 @@
+basePackage: com.example.bookstore
+
+output:
+  directory: src/main/java
+  layout: MULTI_MODULE
+
+generate:
+  delegateImpl: true
+  responseEntityWrapping: VOID_ONLY
+  beanValidation: true
+  pagination: SPRING_DATA
+  addGeneratedAnnotation: true
