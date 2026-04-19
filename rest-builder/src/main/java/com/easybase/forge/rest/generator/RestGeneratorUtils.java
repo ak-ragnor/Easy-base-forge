@@ -3,7 +3,6 @@ package com.easybase.forge.rest.generator;
 import com.easybase.forge.common.config.GeneratorConfig;
 import com.easybase.forge.common.config.PaginationMode;
 import com.easybase.forge.common.util.NamingUtils;
-import com.easybase.forge.common.util.PackageUtils;
 import com.easybase.forge.rest.model.ApiEndpoint;
 import com.easybase.forge.rest.model.ApiParameter;
 import com.easybase.forge.rest.model.ParameterLocation;

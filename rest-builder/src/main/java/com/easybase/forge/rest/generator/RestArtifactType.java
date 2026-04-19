@@ -3,7 +3,6 @@ package com.easybase.forge.rest.generator;
 import com.easybase.forge.common.api.ArtifactKind;
 
 public enum RestArtifactType implements ArtifactKind {
-
 	BASE_CONTROLLER(true),
 
 	CUSTOM_CONTROLLER(false),
