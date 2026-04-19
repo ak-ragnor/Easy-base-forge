@@ -42,7 +42,9 @@
     </issueManagement>
 
     <modules>
-        <module>easybase-core</module>
+        <module>easybase-common</module>
+        <module>easybase-rest-builder</module>
+        <module>easybase-service-builder</module>
         <module>easybase-service-runtime</module>
         <module>easybase-test-fixtures</module>
         <module>easybase-maven-plugin</module>
@@ -174,7 +176,17 @@
 
             <dependency>
                 <groupId>com.easybase</groupId>
-                <artifactId>easybase-core</artifactId>
+                <artifactId>easybase-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.easybase</groupId>
+                <artifactId>easybase-rest-builder</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.easybase</groupId>
+                <artifactId>easybase-service-builder</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

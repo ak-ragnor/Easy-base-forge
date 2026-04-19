@@ -18,7 +18,11 @@
     <dependencies>
         <dependency>
             <groupId>com.easybase</groupId>
-            <artifactId>easybase-core</artifactId>
+            <artifactId>easybase-rest-builder</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.easybase</groupId>
+            <artifactId>easybase-service-builder</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>

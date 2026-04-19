@@ -17,34 +17,25 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
-import com.easybase.forge.core.config.ConfigException;
-import com.easybase.forge.core.config.ConfigLoader;
-import com.easybase.forge.core.config.GeneratorConfig;
-import com.easybase.forge.core.engine.GeneratorEngine;
-import com.easybase.forge.core.writer.GenerationReport;
+import com.easybase.forge.common.config.ConfigException;
+import com.easybase.forge.common.config.ConfigLoader;
+import com.easybase.forge.common.config.GeneratorConfig;
+import com.easybase.forge.common.io.GenerationReport;
+import com.easybase.forge.rest.engine.RestGeneratorEngine;
 
-/**
- * Gradle task that generates Spring REST layer from an OpenAPI specification.
- *
- * <p>Registered as {@code easybaseGenerate} by {@link EasyBasePlugin}.
- * Automatically wired as a dependency of {@code compileJava}.
- */
 @CacheableTask
 public abstract class GenerateTask extends DefaultTask {
 
 	private static final long POST_GENERATE_TIMEOUT_MINUTES = 10L;
 
-	/** Path to the OpenAPI YAML/JSON specification file. */
 	@InputFile
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getSpecFile();
 
-	/** Path to the easybase config file. */
 	@InputFile
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getConfigFile();
 
-	/** Override output directory. Optional — falls back to config file's output.directory. */
 	@Optional
 	@Input
 	public abstract Property<String> getOutputDirectoryOverride();
@@ -77,7 +68,7 @@ public abstract class GenerateTask extends DefaultTask {
 		GenerationReport report;
 
 		try {
-			report = new GeneratorEngine(config).generate(specPath);
+			report = new RestGeneratorEngine(config).generate(specPath);
 		} catch (Exception e) {
 			throw new GradleException("EasyBase generation failed: " + e.getMessage(), e);
 		}

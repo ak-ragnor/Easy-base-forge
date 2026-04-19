@@ -1,0 +1,18 @@
+package com.easybase.forge.rest.model;
+
+import java.util.List;
+
+public record DtoField(
+		String name,
+		String jsonName,
+		String javaType,
+		boolean required,
+		List<ValidationConstraint> validations,
+		boolean nullable,
+		boolean readOnly) {
+
+	public static DtoField of(
+			String name, String jsonName, String javaType, boolean required, List<ValidationConstraint> validations) {
+		return new DtoField(name, jsonName, javaType, required, validations, false, false);
+	}
+}

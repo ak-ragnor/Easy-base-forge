@@ -5,13 +5,13 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import com.easybase.forge.core.config.ConfigException;
-import com.easybase.forge.core.config.ConfigLoader;
-import com.easybase.forge.core.config.GeneratorConfig;
-import com.easybase.forge.core.engine.GeneratorEngine;
-import com.easybase.forge.core.writer.GenerationPlan;
-import com.easybase.forge.core.writer.GenerationReport;
-import com.easybase.forge.core.writer.GenerationUnit;
+import com.easybase.forge.common.config.ConfigException;
+import com.easybase.forge.common.config.ConfigLoader;
+import com.easybase.forge.common.config.GeneratorConfig;
+import com.easybase.forge.common.io.GenerationReport;
+import com.easybase.forge.common.io.GenerationUnit;
+import com.easybase.forge.rest.engine.RestGeneratorEngine;
+import com.easybase.forge.rest.writer.RestGenerationPlan;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -71,7 +71,7 @@ public class BuildRestCommand implements Callable<Integer> {
 		}
 
 		try {
-			GenerationReport report = new GeneratorEngine(config).generate(specFile.toPath());
+			GenerationReport report = new RestGeneratorEngine(config).generate(specFile.toPath());
 			printReport(report);
 			return report.hasErrors() ? 1 : 0;
 		} catch (Exception e) {
@@ -83,8 +83,8 @@ public class BuildRestCommand implements Callable<Integer> {
 	private int runDryRun(GeneratorConfig config) {
 		System.out.println("[DRY RUN] Would generate the following files:");
 		try {
-			var spec = new GeneratorEngine(config).parse(specFile.toPath());
-			List<GenerationUnit> units = new GenerationPlan().build(spec.resources(), config);
+			var spec = new RestGeneratorEngine(config).parse(specFile.toPath());
+			List<GenerationUnit> units = new RestGenerationPlan().build(spec.resources(), config);
 			units.forEach(u -> {
 				String action = u.overwrite() ? "CREATE/UPDATE" : "CREATE (skip if exists)";
 				System.out.printf("  [%-20s] %s%n", action, u.outputPath());

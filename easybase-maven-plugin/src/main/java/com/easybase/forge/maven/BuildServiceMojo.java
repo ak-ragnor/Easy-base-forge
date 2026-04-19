@@ -11,11 +11,11 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
-import com.easybase.forge.core.config.ConfigException;
-import com.easybase.forge.core.service.config.ServiceConfig;
-import com.easybase.forge.core.service.config.ServiceConfigLoader;
-import com.easybase.forge.core.service.engine.ServiceEngine;
-import com.easybase.forge.core.writer.GenerationReport;
+import com.easybase.forge.common.config.ConfigException;
+import com.easybase.forge.common.io.GenerationReport;
+import com.easybase.forge.service.config.ServiceConfig;
+import com.easybase.forge.service.config.ServiceConfigLoader;
+import com.easybase.forge.service.engine.ServiceEngine;
 
 /**
  * Generates the Spring Boot service layer (domain model, repository, persistence adapter,

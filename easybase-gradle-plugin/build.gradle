@@ -17,7 +17,8 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.easybase:easybase-core:0.1.0-SNAPSHOT'
+    implementation 'com.easybase:easybase-rest-builder:0.1.0-SNAPSHOT'
+    implementation 'com.easybase:easybase-service-builder:0.1.0-SNAPSHOT'
 }
 
 gradlePlugin {

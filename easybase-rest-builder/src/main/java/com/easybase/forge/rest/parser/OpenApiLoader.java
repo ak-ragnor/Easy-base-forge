@@ -1,0 +1,38 @@
+package com.easybase.forge.rest.parser;
+
+import java.nio.file.Path;
+import java.util.List;
+import java.util.logging.Logger;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.parser.OpenAPIV3Parser;
+import io.swagger.v3.parser.core.models.ParseOptions;
+import io.swagger.v3.parser.core.models.SwaggerParseResult;
+
+public class OpenApiLoader {
+
+	private static final Logger LOG = Logger.getLogger(OpenApiLoader.class.getName());
+
+	public OpenAPI load(Path specFile) {
+		ParseOptions options = new ParseOptions();
+
+		options.setResolve(true);
+
+		SwaggerParseResult result =
+				new OpenAPIV3Parser().readLocation(specFile.toAbsolutePath().toString(), null, options);
+
+		List<String> messages = result.getMessages();
+
+		if (result.getOpenAPI() == null) {
+			String errors = String.join(", ", messages);
+
+			throw new ParseException("Failed to parse OpenAPI spec at " + specFile + ": " + errors);
+		}
+
+		if (messages != null && !messages.isEmpty()) {
+			messages.forEach(msg -> LOG.warning("[WARN] OpenAPI: " + msg));
+		}
+
+		return result.getOpenAPI();
+	}
+}

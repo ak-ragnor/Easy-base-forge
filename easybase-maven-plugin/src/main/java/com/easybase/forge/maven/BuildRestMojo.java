@@ -12,11 +12,11 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
-import com.easybase.forge.core.config.ConfigException;
-import com.easybase.forge.core.config.ConfigLoader;
-import com.easybase.forge.core.config.GeneratorConfig;
-import com.easybase.forge.core.engine.GeneratorEngine;
-import com.easybase.forge.core.writer.GenerationReport;
+import com.easybase.forge.common.config.ConfigException;
+import com.easybase.forge.common.config.ConfigLoader;
+import com.easybase.forge.common.config.GeneratorConfig;
+import com.easybase.forge.common.io.GenerationReport;
+import com.easybase.forge.rest.engine.RestGeneratorEngine;
 
 /**
  * Generates the Spring Boot REST layer (controllers, delegates, DTOs) from an OpenAPI spec.
@@ -97,7 +97,7 @@ public class BuildRestMojo extends AbstractMojo {
 		GenerationReport report;
 
 		try {
-			report = new GeneratorEngine(config).generate(specFile.toPath());
+			report = new RestGeneratorEngine(config).generate(specFile.toPath());
 		} catch (Exception e) {
 			throw new MojoExecutionException("EasyBase generation failed: " + e.getMessage(), e);
 		}

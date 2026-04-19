@@ -5,12 +5,12 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-import com.easybase.forge.core.config.ConfigException;
-import com.easybase.forge.core.service.config.ServiceConfig;
-import com.easybase.forge.core.service.config.ServiceConfigLoader;
-import com.easybase.forge.core.service.engine.ServiceEngine;
-import com.easybase.forge.core.writer.GenerationReport;
-import com.easybase.forge.core.writer.GenerationUnit;
+import com.easybase.forge.common.config.ConfigException;
+import com.easybase.forge.common.io.GenerationReport;
+import com.easybase.forge.common.io.GenerationUnit;
+import com.easybase.forge.service.config.ServiceConfig;
+import com.easybase.forge.service.config.ServiceConfigLoader;
+import com.easybase.forge.service.engine.ServiceEngine;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -22,7 +22,10 @@ import picocli.CommandLine.Parameters;
 		mixinStandardHelpOptions = true)
 public class BuildServiceCommand implements Callable<Integer> {
 
-	@Parameters(index = "0", description = "Path to the service.yml config file.", defaultValue = "src/main/resources/service.yml")
+	@Parameters(
+			index = "0",
+			description = "Path to the service.yml config file.",
+			defaultValue = "src/main/resources/service.yml")
 	private File serviceConfigFile;
 
 	@Option(
