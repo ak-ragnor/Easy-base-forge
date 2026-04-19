@@ -60,6 +60,23 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>com.easybase</groupId>
+                <artifactId>rest-maven-plugin</artifactId>
+                <version>0.1.1</version>
+                <configuration>
+                    <specFile>${project.basedir}/src/main/resources/api.yaml</specFile>
+                    <configFile>${project.basedir}/easybase-config.yaml</configFile>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>build-rest</id>
+                        <goals>
+                            <goal>build-rest</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>

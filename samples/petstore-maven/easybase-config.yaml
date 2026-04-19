@@ -1,0 +1,12 @@
+basePackage: com.example.petstore
+
+output:
+  directory: src/main/java
+  layout: FLAT
+
+generate:
+  delegateImpl: true
+  responseEntityWrapping: ALWAYS
+  beanValidation: true
+  pagination: NONE
+  addGeneratedAnnotation: true
