@@ -136,12 +136,8 @@ public class EntityGenerator implements ServiceArtifactGenerator {
 
 	private void addRelationshipFields(TypeSpec.Builder builder, ServiceConfig config) {
 		for (RelationshipConfig rel : config.getRelationships()) {
-			if (rel.getType() == RelationType.ONE_TO_ONE) {
+			if (rel.getType() == RelationType.ONE_TO_ONE || rel.getType() == RelationType.MANY_TO_ONE) {
 				builder.addField(buildForeignKeyField(rel));
-			} else if (rel.getType() == RelationType.MANY_TO_ONE) {
-				System.err.println("[EasyBase] WARNING: MANY_TO_ONE relationships are not supported. "
-						+ "Skipping relationship with column '" + rel.getColumn() + "'. "
-						+ "Use ONE_TO_ONE instead.");
 			}
 		}
 	}

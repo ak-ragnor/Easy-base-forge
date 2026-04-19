@@ -2,7 +2,9 @@ package com.easybase.forge.service.generator.model;
 
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.lang.model.element.Modifier;
@@ -24,6 +26,7 @@ import com.squareup.javapoet.AnnotationSpec;
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
+import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
 import com.squareup.javapoet.TypeSpec;
 
@@ -61,8 +64,10 @@ public class ModelBaseGenerator implements ServiceArtifactGenerator {
 		}
 
 		for (RelationshipConfig rel : config.getRelationships()) {
-			if (rel.getType() == RelationType.ONE_TO_ONE) {
+			if (rel.getType() == RelationType.ONE_TO_ONE || rel.getType() == RelationType.MANY_TO_ONE) {
 				builder.addField(buildForeignKeyField(rel));
+			} else if (rel.getType() == RelationType.ONE_TO_MANY) {
+				builder.addField(buildIdSetField(rel));
 			}
 		}
 
@@ -106,6 +111,18 @@ public class ModelBaseGenerator implements ServiceArtifactGenerator {
 		String fieldName = snakeToCamelCase(rel.getColumn());
 		TypeName idType = resolveRelIdType(rel.getIdType());
 		return FieldSpec.builder(idType, fieldName, Modifier.PRIVATE).build();
+	}
+
+	private FieldSpec buildIdSetField(RelationshipConfig rel) {
+		String fieldName = snakeToCamelCase(rel.getColumn());
+
+		TypeName idType = resolveRelIdType(rel.getIdType());
+
+		ParameterizedTypeName setType = ParameterizedTypeName.get(ClassName.get(Set.class), idType);
+
+		return FieldSpec.builder(setType, fieldName, Modifier.PRIVATE)
+				.initializer("new $T<>()", ClassName.get(HashSet.class))
+				.build();
 	}
 
 	private TypeName resolveRelIdType(String idType) {

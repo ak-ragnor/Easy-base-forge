@@ -110,7 +110,7 @@ public class PersistenceAdapterGenerator implements ServiceArtifactGenerator {
 		}
 
 		for (RelationshipConfig rel : config.getRelationships()) {
-			if (rel.getType() == RelationType.ONE_TO_ONE) {
+			if (rel.getType() == RelationType.ONE_TO_ONE || rel.getType() == RelationType.MANY_TO_ONE) {
 				String fkField = snakeToCamelCase(rel.getColumn());
 				String setterName = capitalise(fkField);
 				builder.addStatement("domain.set$L(entity.get$L())", setterName, setterName);
@@ -159,11 +159,12 @@ public class PersistenceAdapterGenerator implements ServiceArtifactGenerator {
 		}
 
 		for (RelationshipConfig rel : config.getRelationships()) {
-			if (rel.getType() == RelationType.ONE_TO_ONE) {
+			if (rel.getType() == RelationType.ONE_TO_ONE || rel.getType() == RelationType.MANY_TO_ONE) {
 				String fkField = snakeToCamelCase(rel.getColumn());
 				String setterName = capitalise(fkField);
 				builder.addStatement("entity.set$L(domain.get$L())", setterName, setterName);
 			}
+			// ONE_TO_MANY: no entity column — populated by caller if needed
 		}
 
 		builder.addCode("\n");

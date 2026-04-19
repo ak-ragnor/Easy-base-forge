@@ -30,6 +30,13 @@ relationships:
     column: tenant_id
     nullable: false
     idType: UUID
+  - type: MANY_TO_ONE
+    column: category_id
+    nullable: true
+    idType: UUID
+  - type: ONE_TO_MANY
+    column: tag_ids
+    idType: UUID
 
 crud:
   create: true

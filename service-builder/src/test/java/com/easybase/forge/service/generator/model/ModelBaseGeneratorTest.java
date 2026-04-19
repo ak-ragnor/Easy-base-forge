@@ -66,10 +66,18 @@ class ModelBaseGeneratorTest {
 	}
 
 	@Test
-	void generate_excludesOneToManyFromModel() {
+	void generate_oneToMany_hasSetIdField() {
 		String source = generateSource("user.yml");
 
-		assertThat(source).doesNotContain("List");
+		assertThat(source).contains("Set");
+		assertThat(source).contains("tagIds");
+	}
+
+	@Test
+	void generate_manyToOne_hasSingleIdField() {
+		String source = generateSource("user.yml");
+
+		assertThat(source).contains("UUID categoryId");
 	}
 
 	@Test

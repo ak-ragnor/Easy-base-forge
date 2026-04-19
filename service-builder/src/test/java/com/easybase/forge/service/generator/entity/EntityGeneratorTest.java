@@ -161,6 +161,29 @@ class EntityGeneratorTest {
 	}
 
 	@Test
+	void generate_manyToOne_hasPlainFkColumnField() {
+		String source = generateSource("user.yml");
+
+		assertThat(source).contains("category_id");
+		assertThat(source).contains("UUID categoryId");
+	}
+
+	@Test
+	void generate_manyToOne_hasNoJpaRelAnnotation() {
+		String source = generateSource("user.yml");
+
+		assertThat(source).doesNotContain("@ManyToOne");
+	}
+
+	@Test
+	void generate_oneToMany_hasNoFieldInEntity() {
+		String source = generateSource("user.yml");
+
+		assertThat(source).doesNotContain("tag_ids");
+		assertThat(source).doesNotContain("tagIds");
+	}
+
+	@Test
 	void generate_outputPathIsInDomainEntityPackage() {
 		List<GeneratedArtifact> artifacts = generate("user.yml");
 
