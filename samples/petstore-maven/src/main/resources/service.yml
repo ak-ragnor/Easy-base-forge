@@ -1,0 +1,155 @@
+modules:
+  - name: petstore
+    entities:
+
+      - name: Owner
+        tablePrefix: eb_
+
+        id:
+          type: UUID
+
+        audit:
+          enabled: true
+          auditorType: UUID
+
+        softDelete:
+          enabled: true
+
+        tenant:
+          enabled: false
+
+        fields:
+          - name: name
+            type: String
+            required: true
+            maxLength: 100
+          - name: email
+            type: String
+            required: true
+            maxLength: 255
+            unique: true
+          - name: phone
+            type: String
+            maxLength: 20
+
+        relationships:
+          - type: ONE_TO_MANY
+            column: pet_ids
+            idType: UUID
+
+        crud:
+          create: true
+          update: true
+          delete: true
+          get: true
+          list: true
+
+        hook:
+          enabled: true
+          multiple: true
+
+      - name: Pet
+        tablePrefix: eb_
+
+        id:
+          type: UUID
+
+        audit:
+          enabled: true
+          auditorType: UUID
+
+        softDelete:
+          enabled: true
+
+        tenant:
+          enabled: false
+
+        fields:
+          - name: name
+            type: String
+            required: true
+            maxLength: 100
+          - name: species
+            type: String
+            required: true
+            maxLength: 50
+          - name: breed
+            type: String
+            maxLength: 100
+          - name: status
+            type: String
+            required: true
+            maxLength: 20
+
+        relationships:
+          - type: MANY_TO_ONE
+            column: owner_id
+            nullable: false
+            idType: UUID
+          - type: ONE_TO_ONE
+            column: medical_record_id
+            nullable: true
+            idType: UUID
+          - type: ONE_TO_MANY
+            column: vaccination_ids
+            idType: UUID
+
+        crud:
+          create: true
+          update: true
+          delete: true
+          get: true
+          list: true
+
+        hook:
+          enabled: true
+          multiple: true
+
+      - name: Vaccination
+        tablePrefix: eb_
+
+        id:
+          type: UUID
+
+        audit:
+          enabled: true
+          auditorType: UUID
+
+        softDelete:
+          enabled: false
+
+        tenant:
+          enabled: false
+
+        fields:
+          - name: vaccineName
+            type: String
+            required: true
+            maxLength: 100
+          - name: administeredDate
+            type: LocalDate
+          - name: nextDueDate
+            type: LocalDate
+          - name: batchNumber
+            type: String
+            maxLength: 50
+          - name: notes
+            type: String
+            maxLength: 500
+
+        relationships:
+          - type: MANY_TO_ONE
+            column: pet_id
+            nullable: false
+            idType: UUID
+
+        crud:
+          create: true
+          update: true
+          delete: true
+          get: true
+          list: true
+
+        hook:
+          enabled: true
+          multiple: false
