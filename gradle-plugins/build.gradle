@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.easybase'
-version = '0.1.0-SNAPSHOT'
+version = '0.1.0'
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -17,8 +17,8 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.easybase:easybase-rest-builder:0.1.0-SNAPSHOT'
-    implementation 'com.easybase:easybase-service-builder:0.1.0-SNAPSHOT'
+    implementation 'com.easybase:easybase-rest-builder:0.1.0'
+    implementation 'com.easybase:easybase-service-builder:0.1.0'
 }
 
 gradlePlugin {
