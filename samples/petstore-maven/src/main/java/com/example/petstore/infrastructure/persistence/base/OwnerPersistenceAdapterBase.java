@@ -25,11 +25,7 @@ public abstract class OwnerPersistenceAdapterBase implements OwnerRepository {
 
   protected OwnerPersistenceAdapterBase(OwnerJpaRepository jpaRepo, List<OwnerHookBase> hooks) {
     this.ownerJpaRepository = jpaRepo;
-    this.ownerHooks = Collections.emptyList();
-
-    if (hooks != null) {
-      this.ownerHooks = hooks;
-    }
+    this.ownerHooks = hooks != null ? hooks : Collections.emptyList();
   }
 
   @Override

@@ -25,11 +25,7 @@ public abstract class PetPersistenceAdapterBase implements PetRepository {
 
   protected PetPersistenceAdapterBase(PetJpaRepository jpaRepo, List<PetHookBase> hooks) {
     this.petJpaRepository = jpaRepo;
-    this.petHooks = Collections.emptyList();
-
-    if (hooks != null) {
-      this.petHooks = hooks;
-    }
+    this.petHooks = hooks != null ? hooks : Collections.emptyList();
   }
 
   @Override

@@ -26,11 +26,7 @@ public abstract class VaccinationPersistenceAdapterBase implements VaccinationRe
   protected VaccinationPersistenceAdapterBase(VaccinationJpaRepository jpaRepo,
       List<VaccinationHookBase> hooks) {
     this.vaccinationJpaRepository = jpaRepo;
-    this.vaccinationHooks = Collections.emptyList();
-
-    if (hooks != null) {
-      this.vaccinationHooks = hooks;
-    }
+    this.vaccinationHooks = hooks != null ? hooks : Collections.emptyList();
   }
 
   @Override
