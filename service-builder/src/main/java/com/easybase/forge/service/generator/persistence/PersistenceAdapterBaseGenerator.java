@@ -117,11 +117,10 @@ public class PersistenceAdapterBaseGenerator implements ServiceArtifactGenerator
 
 			builder.addParameter(hookListType, "hooks");
 			builder.addStatement("this.$L = jpaRepo", jpaRepoFieldName);
-			builder.addStatement("this.$L = $T.emptyList()", hooksFieldName, ClassName.get("java.util", "Collections"));
-			builder.addCode("\n");
-			builder.beginControlFlow("if (hooks != null)");
-			builder.addStatement("this.$L = hooks", hooksFieldName);
-			builder.endControlFlow();
+			builder.addStatement(
+					"this.$L = hooks != null ? hooks : $T.emptyList()",
+					hooksFieldName,
+					ClassName.get("java.util", "Collections"));
 		} else {
 			builder.addStatement("this.$L = jpaRepo", jpaRepoFieldName);
 		}
