@@ -1,0 +1,477 @@
+openapi: 3.0.3
+info:
+  title: Petstore API
+  version: 1.0.0
+  description: >
+    Complete petstore demo for EasyBase Forge.
+    Covers owners, pets and vaccinations with full CRUD,
+    bean validation, and all three relationship types.
+
+tags:
+  - name: owners
+    description: Pet owner management
+  - name: pets
+    description: Pet management
+  - name: vaccinations
+    description: Vaccination record management
+
+paths:
+
+  /owners:
+    get:
+      tags: [owners]
+      operationId: listOwners
+      summary: List all owners
+      parameters:
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OwnerDTO'
+
+    post:
+      tags: [owners]
+      operationId: createOwner
+      summary: Register a new owner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOwnerRequest'
+      responses:
+        '201':
+          description: Owner created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerDTO'
+
+  /owners/{id}:
+    get:
+      tags: [owners]
+      operationId: getOwnerById
+      summary: Get an owner by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerDTO'
+        '404':
+          description: Not found
+
+    put:
+      tags: [owners]
+      operationId: updateOwner
+      summary: Update an owner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOwnerRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerDTO'
+
+    delete:
+      tags: [owners]
+      operationId: deleteOwner
+      summary: Delete an owner (soft)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+
+  /pets:
+    get:
+      tags: [pets]
+      operationId: listPets
+      summary: List pets, optionally filtered by owner or status
+      parameters:
+        - name: ownerId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [available, adopted, unavailable]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PetDTO'
+
+    post:
+      tags: [pets]
+      operationId: createPet
+      summary: Register a new pet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePetRequest'
+      responses:
+        '201':
+          description: Pet created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetDTO'
+
+  /pets/{id}:
+    get:
+      tags: [pets]
+      operationId: getPetById
+      summary: Get a pet by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetDTO'
+        '404':
+          description: Not found
+
+    put:
+      tags: [pets]
+      operationId: updatePet
+      summary: Update a pet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePetRequest'
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetDTO'
+
+    delete:
+      tags: [pets]
+      operationId: deletePet
+      summary: Delete a pet (soft)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+
+  /vaccinations:
+    get:
+      tags: [vaccinations]
+      operationId: listVaccinations
+      summary: List vaccinations, optionally filtered by pet
+      parameters:
+        - name: petId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VaccinationDTO'
+
+    post:
+      tags: [vaccinations]
+      operationId: createVaccination
+      summary: Record a vaccination
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVaccinationRequest'
+      responses:
+        '201':
+          description: Vaccination recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaccinationDTO'
+
+  /vaccinations/{id}:
+    get:
+      tags: [vaccinations]
+      operationId: getVaccinationById
+      summary: Get a vaccination record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaccinationDTO'
+
+    delete:
+      tags: [vaccinations]
+      operationId: deleteVaccination
+      summary: Delete a vaccination record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+
+components:
+  schemas:
+
+    OwnerDTO:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    CreateOwnerRequest:
+      type: object
+      required: [name, email]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        phone:
+          type: string
+          maxLength: 20
+
+    UpdateOwnerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        phone:
+          type: string
+          maxLength: 20
+
+    PetDTO:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+        species:
+          type: string
+        breed:
+          type: string
+          nullable: true
+        status:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+        medicalRecordId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    CreatePetRequest:
+      type: object
+      required: [name, species, status, ownerId]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        species:
+          type: string
+          minLength: 1
+          maxLength: 50
+        breed:
+          type: string
+          maxLength: 100
+        status:
+          type: string
+          maxLength: 20
+        ownerId:
+          type: string
+          format: uuid
+        medicalRecordId:
+          type: string
+          format: uuid
+
+    UpdatePetRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        breed:
+          type: string
+          maxLength: 100
+        status:
+          type: string
+          maxLength: 20
+        medicalRecordId:
+          type: string
+          format: uuid
+
+    VaccinationDTO:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        vaccineName:
+          type: string
+        petId:
+          type: string
+          format: uuid
+        administeredDate:
+          type: string
+          format: date
+          nullable: true
+        nextDueDate:
+          type: string
+          format: date
+          nullable: true
+        batchNumber:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    CreateVaccinationRequest:
+      type: object
+      required: [vaccineName, petId]
+      properties:
+        vaccineName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        petId:
+          type: string
+          format: uuid
+        administeredDate:
+          type: string
+          format: date
+        nextDueDate:
+          type: string
+          format: date
+        batchNumber:
+          type: string
+          maxLength: 50
+        notes:
+          type: string
+          maxLength: 500
