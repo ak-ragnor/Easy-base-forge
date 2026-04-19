@@ -42,14 +42,13 @@
     </issueManagement>
 
     <modules>
-        <module>easybase-common</module>
-        <module>easybase-rest-builder</module>
-        <module>easybase-service-builder</module>
-        <module>easybase-service-runtime</module>
-        <module>easybase-test-fixtures</module>
-        <module>easybase-maven-plugin</module>
-        <module>easybase-cli</module>
-        <module>easybase-gradle-plugin</module>
+        <module>common</module>
+        <module>rest-builder</module>
+        <module>service-builder</module>
+        <module>test-fixtures</module>
+        <module>maven-plugins</module>
+        <module>cli</module>
+        <module>gradle-plugins</module>
     </modules>
 
     <properties>
@@ -187,11 +186,6 @@
             <dependency>
                 <groupId>com.easybase</groupId>
                 <artifactId>easybase-service-builder</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.easybase</groupId>
-                <artifactId>easybase-service-runtime</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

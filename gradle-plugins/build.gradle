@@ -1,0 +1,45 @@
+plugins {
+    id 'java-gradle-plugin'
+    id 'maven-publish'
+}
+
+group = 'com.easybase'
+version = '0.1.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    implementation 'com.easybase:easybase-rest-builder:0.1.0-SNAPSHOT'
+    implementation 'com.easybase:easybase-service-builder:0.1.0-SNAPSHOT'
+}
+
+gradlePlugin {
+    plugins {
+        restPlugin {
+            id = 'com.easybase.forge.rest'
+            implementationClass = 'com.easybase.forge.gradle.RestPlugin'
+        }
+        servicePlugin {
+            id = 'com.easybase.forge.service'
+            implementationClass = 'com.easybase.forge.gradle.ServicePlugin'
+        }
+        easybasePlugin {
+            id = 'com.easybase.forge'
+            implementationClass = 'com.easybase.forge.gradle.EasyBasePlugin'
+        }
+    }
+}
+
+processResources {
+    filesMatching('easybase-version.properties') {
+        expand(version: project.version)
+    }
+}

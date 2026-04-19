@@ -6,6 +6,10 @@ memory/
 target/
 *.class
 
+# Gradle build output
+build/
+.gradle/
+
 # IDE
 .idea/
 *.iml
