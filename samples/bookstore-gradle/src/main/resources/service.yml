@@ -4,9 +4,13 @@ modules:
       - name: Author
         id:
           type: UUID
-        audit: true
-        softDelete: true
+        audit:
+          enabled: true
+          auditorType: UUID
+        softDelete:
+          enabled: true
         tenant:
+          enabled: true
           tenantIdType: UUID
         hook:
           multiple: true
@@ -34,9 +38,13 @@ modules:
       - name: Book
         id:
           type: UUID
-        audit: true
-        softDelete: true
+        audit:
+          enabled: true
+          auditorType: UUID
+        softDelete:
+          enabled: true
         tenant:
+          enabled: true
           tenantIdType: UUID
         hook:
           multiple: true
@@ -78,11 +86,16 @@ modules:
       - name: Review
         id:
           type: Long
-        audit: true
-        softDelete: false
+        audit:
+          enabled: true
+          auditorType: UUID
+        softDelete:
+          enabled: false
         tenant:
+          enabled: true
           tenantIdType: UUID
-        hook: false
+        hook:
+          multiple: false
         fields:
           - name: rating
             type: Integer

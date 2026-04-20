@@ -1,0 +1,44 @@
+package com.example.bookstore.author.domain.model;
+
+import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+/**
+ * Generated base domain model for {@code Author}.
+ *
+ * <p>Contains all generated fields. Do not edit — this file is always regenerated.
+ * Add custom fields in the subclass {@code Author}.
+ */
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class AuthorBase {
+  private UUID id;
+
+  private String name;
+
+  private String bio;
+
+  private String email;
+
+  private Set<UUID> bookIds = new HashSet<>();
+
+  private Instant createdAt;
+
+  private UUID createdBy;
+
+  private Instant updatedAt;
+
+  private UUID updatedBy;
+
+  private Boolean deleted;
+
+  private UUID tenantId;
+}
