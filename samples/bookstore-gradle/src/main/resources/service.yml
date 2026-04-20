@@ -1,0 +1,102 @@
+modules:
+  - name: author
+    entities:
+      - name: Author
+        id:
+          type: UUID
+        audit: true
+        softDelete: true
+        tenant:
+          tenantIdType: UUID
+        hook:
+          multiple: true
+        fields:
+          - name: name
+            type: String
+            required: true
+            maxLength: 100
+          - name: bio
+            type: String
+            required: false
+            maxLength: 1000
+          - name: email
+            type: String
+            required: true
+            unique: true
+            maxLength: 255
+        relationships:
+          - type: ONE_TO_MANY
+            column: book_ids
+            idType: UUID
+
+  - name: book
+    entities:
+      - name: Book
+        id:
+          type: UUID
+        audit: true
+        softDelete: true
+        tenant:
+          tenantIdType: UUID
+        hook:
+          multiple: true
+        fields:
+          - name: title
+            type: String
+            required: true
+            maxLength: 200
+          - name: isbn
+            type: String
+            required: true
+            unique: true
+            maxLength: 20
+          - name: genre
+            type: String
+            required: false
+            maxLength: 50
+          - name: price
+            type: BigDecimal
+            required: false
+          - name: publishedDate
+            type: LocalDate
+            required: false
+        relationships:
+          - type: MANY_TO_ONE
+            column: author_id
+            nullable: false
+            idType: UUID
+          - type: ONE_TO_ONE
+            column: cover_image_id
+            nullable: true
+            idType: UUID
+          - type: ONE_TO_MANY
+            column: review_ids
+            idType: Long
+
+  - name: review
+    entities:
+      - name: Review
+        id:
+          type: Long
+        audit: true
+        softDelete: false
+        tenant:
+          tenantIdType: UUID
+        hook: false
+        fields:
+          - name: rating
+            type: Integer
+            required: true
+          - name: comment
+            type: String
+            required: false
+            maxLength: 2000
+          - name: reviewerName
+            type: String
+            required: true
+            maxLength: 100
+        relationships:
+          - type: MANY_TO_ONE
+            column: book_id
+            nullable: false
+            idType: UUID
